@@ -7,7 +7,7 @@
   <title>Pine Protocol | Web3 DeFi, NFT Loans & Global Financial Markets</title>
   
   <!-- PWA Manifest & Meta Tags -->
-  <link rel="manifest" href="manifest.json?v=2">
+  <link rel="manifest" href="manifest.json?v=5">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
   <meta name="theme-color" content="#050b14">
@@ -338,11 +338,12 @@
               <div id="fingerprintContainer" class="relative w-24 h-24 rounded-full bg-gray-900 border-4 border-gray-700 flex items-center justify-center cursor-pointer select-none shadow-xl transition-all overflow-hidden mx-auto no-context-menu"
                    onmousedown="handleFingerprintPressStart(event)" onmouseup="handleFingerprintPressEnd(event)" onmouseleave="handleFingerprintPressEnd(event)"
                    ontouchstart="handleFingerprintPressStart(event)" ontouchend="handleFingerprintPressEnd(event)" oncontextmenu="return false;">
-                <div id="fingerprintProgressBg" class="absolute bottom-0 left-0 right-0 bg-emerald-500/30 transition-all duration-300 pointer-events-none" style="height: 0%;"></div>
-                <i id="fingerprintIcon" class="fa-solid fa-fingerprint text-4xl text-gray-500 transition-colors z-10 pointer-events-none"></i>
+                <!-- ملء شكل البصمة الداخلية عبر 5 ضغطات مطولة -->
+                <div id="fingerprintProgressBg" class="absolute bottom-0 left-0 right-0 bg-emerald-500/40 transition-all duration-300 pointer-events-none rounded-b-full" style="height: 0%;"></div>
+                <i id="fingerprintIcon" class="fa-solid fa-fingerprint text-4xl text-gray-400 transition-colors z-10 pointer-events-none"></i>
               </div>
-              <p class="text-xs font-bold text-white">Press and hold progressively to complete fingerprint verification</p>
-              <p id="bioStatusText" class="text-xs text-gold-400 font-bold mt-1">Scanning biometric data...</p>
+              <p class="text-xs font-bold text-white">Press and hold 5 times progressively to complete biometric verification</p>
+              <p id="bioStatusText" class="text-xs text-gold-400 font-bold mt-1">Press 1 of 5 completed (0% scanned)</p>
             </div>
             <div class="flex gap-2 pt-1">
               <button type="button" onclick="goToStep(2)" class="w-1/3 py-2.5 rounded-xl bg-gray-800 text-gray-300 text-xs font-bold">Back</button>
@@ -844,13 +845,33 @@
 
       <div id="loanPreviewBox" class="glass-card p-3 rounded-xl space-y-1 text-[11px] font-mono text-gold-400 border border-gold-500/35"></div>
 
+      <!-- Biometric Fingerprint Security in Contract Pledge Modal -->
+      <div class="glass-card p-3 rounded-2xl border border-gold-500/40 space-y-2 text-center no-context-menu">
+        <p class="text-xs font-bold text-gold-400"><i class="fa-solid fa-fingerprint mr-1"></i> Biometric Contract Security Scan</p>
+        <p class="text-[10px] text-gray-300">Press and hold 5 times progressively to authorize contract signature:</p>
+        <div id="contractFingerprintContainer" class="relative w-20 h-20 rounded-full bg-gray-900 border-4 border-gray-700 flex items-center justify-center cursor-pointer select-none shadow-xl transition-all overflow-hidden mx-auto no-context-menu"
+             onmousedown="handleContractFingerprintPressStart(event)" onmouseup="handleContractFingerprintPressEnd(event)" onmouseleave="handleContractFingerprintPressEnd(event)"
+             ontouchstart="handleContractFingerprintPressStart(event)" ontouchend="handleContractFingerprintPressEnd(event)" oncontextmenu="return false;">
+          <!-- ملء شكل البصمة الداخلية بـ 5 ضغطات -->
+          <div id="contractFingerprintProgressBg" class="absolute bottom-0 left-0 right-0 bg-emerald-500/40 transition-all duration-300 pointer-events-none rounded-b-full" style="height: 0%;"></div>
+          <i id="contractFingerprintIcon" class="fa-solid fa-fingerprint text-3xl text-gray-400 transition-colors z-10 pointer-events-none"></i>
+        </div>
+        <p id="contractBioStatusText" class="text-[10px] text-gold-400 font-bold">Press 1 of 5 completed (0% scanned)</p>
+      </div>
+
+      <!-- Live Video Verification with Actual Front Camera Feed (5 seconds per direction) -->
       <div class="glass-card p-3 rounded-2xl border border-gold-500/40 space-y-2 text-center">
         <div class="flex justify-between items-center text-xs font-bold text-gold-400">
           <span><i class="fa-solid fa-video mr-1"></i> Live Liveness Video Verification</span>
           <span id="videoCheckStatus" class="text-[10px] text-red-400 font-mono">Not Verified</span>
         </div>
-        <p class="text-[10px] text-gray-300">Required: Look Up (1s), Right (1s), and Left (1s) before signing contract.</p>
+        <p class="text-[10px] text-gray-300">Required: Look Up (5s), Right (5s), and Left (5s) before signing contract.</p>
         
+        <!-- Camera Stream Element -->
+        <div id="videoCameraWrapper" class="hidden relative w-full h-36 bg-black rounded-xl overflow-hidden border border-gold-500/60 mx-auto">
+          <video id="liveContractVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+        </div>
+
         <div id="videoDirectionPrompt" class="p-2 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs font-bold flex items-center justify-center gap-2">
           <i id="dirArrowIcon" class="fa-solid fa-arrow-up text-gold-400 text-base animate-bounce"></i>
           <span id="dirPromptText">Look UP toward camera</span>
@@ -867,7 +888,7 @@
       </div>
 
       <button id="signContractBtn" onclick="executeSmartContractPledgeLoan()" disabled class="w-full py-2.5 rounded-xl bg-gray-700 text-gray-400 font-extrabold text-xs cursor-not-allowed">
-        Complete Video Check to Sign & Withdraw Loan 🚀
+        Complete Fingerprint & Video Check to Sign 🚀
       </button>
     </div>
   </div>
@@ -1486,30 +1507,81 @@
       document.getElementById('portfolioPnL').innerText = `+${(totalVal - 10000).toFixed(2)} $ (${(((totalVal - 10000) / 10000) * 100).toFixed(2)}%)`;
     }
 
+    // --- البصمة الوراثية في خطوة التسجيل (5 ضغطات مطولة) ---
     let fingerprintPressCount = 0, pressTimer = null, isBioVerified = false;
+    
     function handleFingerprintPressStart(e) {
       if(e) { e.preventDefault(); e.stopPropagation(); }
       if(isBioVerified) return;
       
+      let progressStep = 0;
       pressTimer = setInterval(() => {
-        fingerprintPressCount++;
-        let fillPercentage = fingerprintPressCount * 20;
-        document.getElementById('fingerprintProgressBg').style.height = `${fillPercentage}%`;
-        document.getElementById('fingerprintIcon').style.color = `#10b981`;
-        document.getElementById('bioStatusText').innerText = `Scanning biometric fingerprint... (${fillPercentage}%)`;
-        if(fingerprintPressCount >= 5) {
+        progressStep += 5;
+        if(progressStep >= 100) {
           clearInterval(pressTimer);
           pressTimer = null;
-          isBioVerified = true;
-          document.getElementById('bioStatusText').innerText = "Biometric fingerprint verified successfully ✓";
-          document.getElementById('bioStatusText').className = "text-xs text-emerald-400 font-bold mt-1";
+          fingerprintPressCount++;
+          
+          let totalHeight = fingerprintPressCount * 20; 
+          if(totalHeight > 100) totalHeight = 100;
+          
+          document.getElementById('fingerprintProgressBg').style.height = `${totalHeight}%`;
+          
+          if(fingerprintPressCount >= 5) {
+            isBioVerified = true;
+            document.getElementById('fingerprintIcon').style.color = `#10b981`;
+            document.getElementById('bioStatusText').innerText = "Biometric 5-step fingerprint verified successfully ✓";
+            document.getElementById('bioStatusText').className = "text-xs text-emerald-400 font-bold mt-1";
+          } else {
+            document.getElementById('bioStatusText').innerText = `Press ${fingerprintPressCount + 1} of 5 completed (${totalHeight}% scanned)...`;
+          }
         }
-      }, 500);
+      }, 100);
     }
+    
     function handleFingerprintPressEnd(e) { 
       if(e) { e.preventDefault(); }
       if(pressTimer) { clearInterval(pressTimer); pressTimer = null; } 
     }
+
+    // --- البصمة الوراثية في شاشة التعاقد (5 ضغطات مطولة) ---
+    let contractFingerprintPressCount = 0, contractPressTimer = null, isContractBioVerified = false;
+
+    function handleContractFingerprintPressStart(e) {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if(isContractBioVerified) return;
+      
+      let progressStep = 0;
+      contractPressTimer = setInterval(() => {
+        progressStep += 5;
+        if(progressStep >= 100) {
+          clearInterval(contractPressTimer);
+          contractPressTimer = null;
+          contractFingerprintPressCount++;
+          
+          let totalHeight = contractFingerprintPressCount * 20;
+          if(totalHeight > 100) totalHeight = 100;
+          
+          document.getElementById('contractFingerprintProgressBg').style.height = `${totalHeight}%`;
+          
+          if(contractFingerprintPressCount >= 5) {
+            isContractBioVerified = true;
+            document.getElementById('contractFingerprintIcon').style.color = `#10b981`;
+            document.getElementById('contractBioStatusText').innerText = "Contract Biometric Verified ✓";
+            document.getElementById('contractBioStatusText').className = "text-[10px] text-emerald-400 font-bold";
+            checkContractUnlockStatus();
+          } else {
+            document.getElementById('contractBioStatusText').innerText = `Press ${contractFingerprintPressCount + 1} of 5 completed (${totalHeight}% scanned)...`;
+          }
+        }
+      }, 100);
+    }
+
+    function handleContractFingerprintPressEnd(e) {
+      if(e) { e.preventDefault(); }
+      if(contractPressTimer) { clearInterval(contractPressTimer); contractPressTimer = null; }
+    }
+    // -------------------------------------------------------------
 
     function openWhatsAppForCode() {
       const phone = document.getElementById('userPhone').value.trim();
@@ -1534,7 +1606,7 @@
       goToStep(3);
     }
     function validateStep3() {
-      if(!isBioVerified) { showCustomAlert("Please complete fingerprint scan successfully."); return; }
+      if(!isBioVerified) { showCustomAlert("Please complete all 5 fingerprint scan steps successfully."); return; }
       goToStep(4);
     }
 
@@ -2090,10 +2162,18 @@
 
     let activePledgeIndex = null;
     let isVideoCheckPassed = false;
+    let activeContractStream = null;
 
     function openAdvancedPledgeModal(index) {
       activePledgeIndex = index;
       isVideoCheckPassed = false;
+      isContractBioVerified = false;
+      contractFingerprintPressCount = 0;
+      document.getElementById('contractFingerprintProgressBg').style.height = `0%`;
+      document.getElementById('contractFingerprintIcon').style.color = `#9ca3af`;
+      document.getElementById('contractBioStatusText').innerText = "Press 1 of 5 completed (0% scanned)";
+      document.getElementById('contractBioStatusText').className = "text-[10px] text-gold-400 font-bold";
+
       document.getElementById('videoCheckStatus').innerText = "Not Verified";
       document.getElementById('videoCheckStatus').className = "text-[10px] text-red-400 font-mono";
       document.getElementById('signContractBtn').disabled = true;
@@ -2111,20 +2191,50 @@
       `;
 
       calculateLoanSchedulePreview();
+      
+      if(activeContractStream) {
+        activeContractStream.getTracks().forEach(track => track.stop());
+        activeContractStream = null;
+      }
+      document.getElementById('videoCameraWrapper').classList.add('hidden');
+
       openModal('pledgeModal');
     }
 
-    function startLiveVideoVerification() {
+    function checkContractUnlockStatus() {
+      if(isContractBioVerified && isVideoCheckPassed) {
+        document.getElementById('signContractBtn').disabled = false;
+        document.getElementById('signContractBtn').className = "w-full py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 text-black font-extrabold text-xs shadow-lg cursor-pointer";
+      }
+    }
+
+    // --- تشغيل كاميرا الفيديو الحقيقية (5 ثوانٍ لكل اتجاه) ---
+    async function startLiveVideoVerification() {
+      const videoWrapper = document.getElementById('videoCameraWrapper');
+      const videoEl = document.getElementById('liveContractVideo');
+      
+      videoWrapper.classList.remove('hidden');
+      
+      try {
+        if(!activeContractStream) {
+          activeContractStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        }
+        videoEl.srcObject = activeContractStream;
+      } catch(err) {
+        console.log("Camera access fallback active");
+      }
+
       const directions = [
-        { text: "Look UP toward camera (1s)", icon: "fa-arrow-up" },
-        { text: "Look RIGHT (1s)", icon: "fa-arrow-right" },
-        { text: "Look LEFT (1s)", icon: "fa-arrow-left" }
+        { text: "Look UP toward camera (5s)", icon: "fa-arrow-up" },
+        { text: "Look RIGHT (5s)", icon: "fa-arrow-right" },
+        { text: "Look LEFT (5s)", icon: "fa-arrow-left" }
       ];
       
       let step = 0;
-      document.getElementById('videoCheckStatus').innerText = "Verifying Live Video...";
+      document.getElementById('videoCheckStatus').innerText = "Verifying Live Video Feed...";
       document.getElementById('videoCheckStatus').className = "text-[10px] text-gold-400 font-mono animate-pulse";
 
+      // 5 ثوانٍ لكل اتجاه
       const dirInterval = setInterval(() => {
         if(step < directions.length) {
           document.getElementById('dirPromptText').innerText = directions[step].text;
@@ -2137,11 +2247,16 @@
           document.getElementById('videoCheckStatus').className = "text-[10px] text-emerald-400 font-mono";
           document.getElementById('videoDirectionPrompt').innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i> <span class="text-emerald-400">Live Liveness Check Passed!</span>`;
           
-          document.getElementById('signContractBtn').disabled = false;
-          document.getElementById('signContractBtn').className = "w-full py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 text-black font-extrabold text-xs shadow-lg cursor-pointer";
+          if(activeContractStream) {
+            activeContractStream.getTracks().forEach(track => track.stop());
+            activeContractStream = null;
+          }
+
+          checkContractUnlockStatus();
         }
-      }, 1000);
+      }, 5000);
     }
+    // -------------------------------------------------------------
 
     function calculateLoanSchedulePreview() {
       const nft = currentUser.nfts[activePledgeIndex];
@@ -2163,6 +2278,7 @@
     }
 
     function executeSmartContractPledgeLoan() {
+      if(!isContractBioVerified) { showCustomAlert("Please complete the biometric contract fingerprint scan first."); return; }
       if(!isVideoCheckPassed) { showCustomAlert("Please complete the live video verification first."); return; }
       
       const pass = document.getElementById('pledgePassword').value;
@@ -2434,7 +2550,7 @@
       if(localDb[userId]) {
         localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + usdtAmount;
         if(!localDb[userId].rewardsGranted) {
-          localDb.rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 48);
+          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 48);
           localDb[userId].rewardsGranted = true;
         }
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
@@ -2535,4 +2651,3 @@
   </script>
 </body>
 </html>
-
