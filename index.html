@@ -85,6 +85,20 @@
     }
     .no-context-menu { touch-action: none; }
 
+    /* Custom Golden Sparkle Popup Styles */
+    .golden-popup-glow {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+      border: 2px solid #facc15;
+      box-shadow: 0 0 35px rgba(250, 204, 21, 0.4), inset 0 0 15px rgba(250, 204, 21, 0.2);
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.05); filter: drop-shadow(0 0 12px #facc15); }
+    }
+    .sparkle-badge {
+      animation: sparkle 2s infinite ease-in-out;
+    }
+
     .custom-file-upload-wrapper {
       position: relative;
       overflow: hidden;
@@ -115,6 +129,26 @@
   </style>
 </head>
 <body class="notranslate selection:bg-pine-500 selection:text-black min-h-screen flex flex-col justify-between pb-36 px-2 w-full overflow-x-hidden" oncontextmenu="return false;">
+
+  <!-- GOLDEN WELCOME SPARKLE POPUP MODAL -->
+  <div id="welcomeSparkleModal" class="fixed inset-0 z-[120] hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="golden-popup-glow p-6 rounded-3xl max-w-sm w-full space-y-4 text-center mx-auto relative overflow-hidden">
+      <div class="absolute -top-10 -right-10 w-32 h-32 bg-gold-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-gold-600 via-gold-500 to-amber-300 text-black flex items-center justify-center mx-auto text-2xl shadow-lg sparkle-badge border border-gold-400">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <div>
+        <span class="px-3 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-400 text-[10px] font-extrabold uppercase tracking-widest">Limited Time Offer</span>
+        <h3 class="text-base font-extrabold text-white mt-2 font-mono tracking-wide">WELCOME TO PINE PROTOCOL</h3>
+      </div>
+      <p class="text-xs text-gray-200 leading-relaxed font-semibold">
+        First deposit reward reaches up to <span class="text-gold-400 font-bold">48x</span> of your deposit amount, and you can create your first electronic asset for a limited time!
+      </p>
+      <button onclick="closeWelcomeSparkleModal()" class="w-full py-3 rounded-xl bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-black font-extrabold text-xs shadow-xl hover:scale-[1.02] transition-transform">
+        Explore & Get Started ✨
+      </button>
+    </div>
+  </div>
 
   <!-- CUSTOM ALERT MODAL -->
   <div id="customAlertModal" class="fixed inset-0 z-[100] hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -1083,6 +1117,11 @@
       document.getElementById('customAlertModal').classList.add('hidden');
     }
 
+    function closeWelcomeSparkleModal() {
+      document.getElementById('welcomeSparkleModal').classList.add('hidden');
+      localStorage.setItem('pine_welcome_shown', 'true');
+    }
+
     function compressImage(img, callback) {
       const canvas = document.createElement('canvas');
       let width = img.width;
@@ -1216,6 +1255,11 @@
         if(subEl) subEl.innerText = "Connected to central cloud database";
         if(controlsEl) controlsEl.classList.remove('hidden');
       }, 500);
+
+      // Show Welcome Sparkle Modal on startup
+      setTimeout(() => {
+        document.getElementById('welcomeSparkleModal').classList.remove('hidden');
+      }, 700);
 
       const savedUserSession = localStorage.getItem('pine_logged_user');
       if (savedUserSession) {
@@ -1625,7 +1669,9 @@
       if(!pass || pass.length < 8) { showCustomAlert("Password must be at least 8 characters."); return; }
       if(pass !== confirmPass) { showCustomAlert("Passwords do not match."); return; }
 
-      const userId = phone.replace(/[^0-9a-zA-Z]/g, '_');
+      // Generate random 11-digit user ID unique for each customer
+      let random11Digits = Math.floor(10000000000 + Math.random() * 90000000000).toString();
+      const userId = random11Digits;
       activePhoneForPending = userId;
 
       const newUser = {
@@ -2039,7 +2085,7 @@
           };
           
           closeModal('nftMintModal');
-          document.getElementById('nftSellOfferInfo').innerText = `Your NFT "${name}" (Value: ${val} USDT) has been successfully created and registered under your name! Would you like to list it for sale in the Marketplace with a profit markup or keep it in your portfolio for instant loans?`;
+          document.getElementById('nftSellOfferInfo').innerText = `Your NFT "${name}" (Value: ${val} USDT) has been successfully created and registered under your name! Would you like to list it for sale in the Marketplace immediately or keep it for instant loans?`;
           openModal('nftSellOfferModal');
         }
       }, 1000);
@@ -2603,7 +2649,7 @@
     }
 
     window.addEventListener('popstate', function(event) {
-      const modals = ['customAlertModal', 'exitConfirmModal', 'depositModal', 'depositFormModal', 'withdrawModal', 'transferModal', 'nftMintModal', 'nftSellOfferModal', 'marketModal', 'virtualTradeModal', 'pledgeModal', 'payInstallmentModal', 'loanCalculatorModal', 'imageZoomModal', 'adminAuthModal', 'adminDashboardModal'];
+      const modals = ['welcomeSparkleModal', 'customAlertModal', 'exitConfirmModal', 'depositModal', 'depositFormModal', 'withdrawModal', 'transferModal', 'nftMintModal', 'nftSellOfferModal', 'marketModal', 'virtualTradeModal', 'pledgeModal', 'payInstallmentModal', 'loanCalculatorModal', 'imageZoomModal', 'adminAuthModal', 'adminDashboardModal'];
       let modalClosed = false;
       for(let mId of modals) {
         const el = document.getElementById(mId);
