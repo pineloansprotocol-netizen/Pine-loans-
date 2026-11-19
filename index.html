@@ -142,7 +142,7 @@
         <h3 class="text-base font-extrabold text-white mt-2 font-mono tracking-wide">WELCOME TO PINE PROTOCOL</h3>
       </div>
       <p class="text-xs text-gray-200 leading-relaxed font-semibold">
-        First deposit reward reaches up to <span class="text-gold-400 font-bold">60x</span> of your deposit amount, and you can create your first electronic asset for a limited time!
+        First deposit reward reaches up to <span class="text-gold-400 font-bold">48x</span> of your deposit amount, and you can create your first electronic asset for a limited time!
       </p>
       <button onclick="closeWelcomeSparkleModal()" class="w-full py-3 rounded-xl bg-gradient-to-r from-gold-500 via-amber-500 to-gold-600 text-black font-extrabold text-xs shadow-xl hover:scale-[1.02] transition-transform">
         Explore & Get Started ✨
@@ -452,7 +452,7 @@
             <h4 class="text-base font-bold text-white font-mono" id="mainUserBalance">0.00 USDT</h4>
           </div>
           <div class="glass-card p-2.5 rounded-2xl border border-gold-500/30">
-            <p class="text-[10px] text-gold-400">Rewards Balance (60x / NFT):</p>
+            <p class="text-[10px] text-gold-400">Rewards Balance (50x / NFT):</p>
             <h4 class="text-base font-bold text-gold-400 font-mono" id="rewardsUserBalance">0.00 USDT</h4>
           </div>
         </div>
@@ -528,7 +528,7 @@
           </div>
           <div class="glass-card p-2 rounded-2xl">
             <p class="text-[9px] text-gray-400">Max LTV Limit:</p>
-            <h4 class="text-xs font-bold text-pine-400 font-mono">40% of NFT Value</h4>
+            <h4 class="text-xs font-bold text-pine-400 font-mono">60% of NFT Value</h4>
           </div>
         </div>
 
@@ -626,7 +626,7 @@
         <h3 class="text-xs font-bold text-pine-400">Cloud Deposit Channels</h3>
         <button onclick="closeModal('depositModal')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <p class="text-[11px] text-gray-300">Select your preferred deposit method (First deposit grants 60x rewards bonus automatically):</p>
+      <p class="text-[11px] text-gray-300">Select your preferred deposit method (First deposit grants 48x rewards bonus automatically):</p>
       <div class="grid grid-cols-2 gap-2 text-xs font-bold">
         <button onclick="selectDepositMethod('Binance Pay')" class="p-2.5 rounded-xl bg-gray-800 border border-gray-700 hover:border-pine-500 text-left">Binance Pay</button>
         <button onclick="selectDepositMethod('PayPal')" class="p-2.5 rounded-xl bg-gray-800 border border-gray-700 hover:border-pine-500 text-left">PayPal</button>
@@ -1035,7 +1035,7 @@
           <thead class="bg-gray-800/80 text-gray-300">
             <tr>
               <th class="p-1.5">Name</th>
-              <th class="p-1.5">Phone</th>
+            <th class="p-1.5">Phone</th>
               <th class="p-1.5">Status</th>
               <th class="p-1.5">Selfie & ID / Proof</th>
               <th class="p-1.5">Action</th>
@@ -2200,7 +2200,7 @@
               <p class="text-[9px] text-gray-400">Network: ${nft.network || 'ERC-721'} | Status: ${nft.pledged ? '<span class="text-gold-400 font-bold">Active Pledge (Smart Contract Loan)</span>' : (nft.forSale ? '<span class="text-blue-400 font-bold">Listed in Marketplace</span>' : '<span class="text-emerald-400 font-bold">Owned (Ready to Pledge)</span>')}</p>
             </div>
             <div>
-              ${!nft.pledged && !nft.forSale ? `<button onclick="openAdvancedPledgeModal(${index})" class="px-2.5 py-1 bg-gradient-to-r from-gold-500 to-amber-600 text-black font-bold rounded text-[10px]">Pledge & Borrow (40%)</button>` : `<span class="text-emerald-400 font-bold text-[10px]">${nft.pledged ? 'Active Loan ✓' : 'For Sale'}</span>`}
+              ${!nft.pledged && !nft.forSale ? `<button onclick="openAdvancedPledgeModal(${index})" class="px-2.5 py-1 bg-gradient-to-r from-gold-500 to-amber-600 text-black font-bold rounded text-[10px]">Pledge & Borrow (60%)</button>` : `<span class="text-emerald-400 font-bold text-[10px]">${nft.pledged ? 'Active Loan ✓' : 'For Sale'}</span>`}
             </div>
           </div>`;
       });
@@ -2226,13 +2226,13 @@
       document.getElementById('signContractBtn').className = "w-full py-2.5 rounded-xl bg-gray-700 text-gray-400 font-extrabold text-xs cursor-not-allowed";
       
       const nft = currentUser.nfts[index];
-      const loanVal = nft.value * 0.4;
+      const loanVal = nft.value * 0.6;
       
       document.getElementById('contractIdNum').innerText = Math.floor(1000 + Math.random() * 9000);
       document.getElementById('pledgeNftDetailsBox').innerHTML = `
         <p class="font-bold text-white">Selected Asset: ${nft.name}</p>
         <p class="text-gray-300">NFT Reference Value: <span class="font-mono text-gold-400">${nft.value} USDT</span></p>
-        <p class="text-gray-300">Max Loan Limit (40%): <span class="font-mono text-emerald-400">${loanVal} USDT</span></p>
+        <p class="text-gray-300">Max Loan Limit (60%): <span class="font-mono text-emerald-400">${loanVal} USDT</span></p>
         <p class="text-[9px] text-gray-400">Contract: ${nft.contract || '0x71C...89Fa'} | Token ID: #${nft.id.slice(-4)}</p>
       `;
 
@@ -2306,7 +2306,7 @@
 
     function calculateLoanSchedulePreview() {
       const nft = currentUser.nfts[activePledgeIndex];
-      const loanVal = nft.value * 0.4;
+      const loanVal = nft.value * 0.6;
       const years = parseFloat(document.getElementById('loanDurationYears').value) || 1;
       const annualRate = 0.11;
       
@@ -2332,7 +2332,7 @@
       if(pass !== currentUser.pass) { showCustomAlert("Incorrect password!"); return; }
 
       const nft = currentUser.nfts[activePledgeIndex];
-      const loanVal = nft.value * 0.4;
+      const loanVal = nft.value * 0.6;
       const years = parseFloat(document.getElementById('loanDurationYears').value) || 1;
       const totalMonths = Math.round(years * 12);
       const totalPayable = loanVal * (1 + (0.11 * years));
@@ -2575,7 +2575,7 @@
                   ${d.proofImage ? `<img src="${d.proofImage}" class="w-6 h-6 inline-block rounded cursor-pointer border border-pine-400 ml-1" title="Proof" onclick="zoomImage('${d.proofImage}')">` : ''}
                 </td>
                 <td class="p-2">
-                  <button onclick="approveCloudDeposit('${depKey}', '${d.userId}', ${d.usdtAmount})" class="px-2 py-1 bg-gold-500 text-black font-bold rounded text-[10px]">Approve Deposit + 60x Bonus ✓</button>
+                  <button onclick="approveCloudDeposit('${depKey}', '${d.userId}', ${d.usdtAmount})" class="px-2 py-1 bg-gold-500 text-black font-bold rounded text-[10px]">Approve Deposit + 48x Bonus ✓</button>
                 </td>
               </tr>`;
             }
@@ -2596,7 +2596,7 @@
       if(localDb[userId]) {
         localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + usdtAmount;
         if(!localDb[userId].rewardsGranted) {
-          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 60);
+          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 48);
           localDb[userId].rewardsGranted = true;
         }
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
@@ -2616,17 +2616,17 @@
           if(userObj) {
             userObj.balance = (parseFloat(userObj.balance) || 0) + usdtAmount;
             if(!userObj.rewardsGranted) {
-              userObj.rewardsBalance = (parseFloat(userObj.rewardsBalance) || 0) + (usdtAmount * 60);
+              userObj.rewardsBalance = (parseFloat(userObj.rewardsBalance) || 0) + (usdtAmount * 48);
               userObj.rewardsGranted = true;
             }
             db.ref('users/' + userId).set(userObj).then(() => {
-              showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 60x rewards bonus to user account.`, "Deposit Approved");
+              showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
               loadAdminCloudData();
             });
           }
         });
       } else {
-        showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 60x rewards bonus locally.`, "Deposit Approved");
+        showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
         loadAdminCloudData();
       }
     }
