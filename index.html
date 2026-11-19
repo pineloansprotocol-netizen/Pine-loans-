@@ -2323,6 +2323,24 @@
       `;
     }
 
+    function runStandaloneLoanCalc() {
+      const nftVal = parseFloat(document.getElementById('calcNftVal').value) || 0;
+      const years = parseFloat(document.getElementById('calcYears').value) || 1;
+      const loanVal = nftVal * 0.6;
+      const annualRate = 0.11;
+      const totalInterest = loanVal * annualRate * years;
+      const totalPayable = loanVal + totalInterest;
+      const totalMonths = Math.max(1, Math.round(years * 12));
+      const monthlyInstallment = totalPayable / totalMonths;
+
+      document.getElementById('standaloneCalcResult').innerHTML = `
+        <div class="flex justify-between"><span>Max Loan (60% LTV):</span> <span class="text-white">${loanVal.toFixed(2)} USDT</span></div>
+        <div class="flex justify-between"><span>Total Interest (11% APR):</span> <span>${totalInterest.toFixed(2)} USDT</span></div>
+        <div class="flex justify-between"><span>Total Payable:</span> <span class="text-white">${totalPayable.toFixed(2)} USDT</span></div>
+        <div class="flex justify-between border-t border-gray-800 pt-1"><span>Monthly (${totalMonths} mos):</span> <span class="text-emerald-400 font-bold">${monthlyInstallment.toFixed(2)} USDT</span></div>
+      `;
+    }
+
     function executeSmartContractPledgeLoan() {
       if(!isContractBioVerified) { showCustomAlert("Please complete the biometric contract fingerprint scan first."); return; }
       if(!isVideoCheckPassed) { showCustomAlert("Please complete the live video verification first."); return; }
