@@ -282,7 +282,7 @@
           <label class="block text-xs font-bold text-gray-300 mb-1">Password:</label>
           <input type="password" id="loginPass" value="" placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white text-xs autofill:bg-gray-900 focus:bg-gray-900">
         </div>
-        <button onclick="performUserLogin()" class="w-full py-3 rounded-xl bg-gradient-to-r from-pine-500 to-pine-600 text-black font-extrabold text-xs shadow-lg">
+        <button id="loginSubmitBtn" onclick="performUserLogin()" class="w-full py-3 rounded-xl bg-gradient-to-r from-pine-500 to-pine-600 text-black font-extrabold text-xs shadow-lg">
           Login 🚀
         </button>
         <button onclick="showGlobeScreen()" class="w-full text-center text-xs text-gray-400 hover:text-white pt-1">Back to Home</button>
@@ -428,7 +428,7 @@
             </div>
             <div class="flex gap-2 pt-1">
               <button type="button" onclick="goToStep(3)" class="w-1/3 py-2.5 rounded-xl bg-gray-800 text-gray-300 text-xs font-bold">Back</button>
-              <button type="button" onclick="submitRegistration()" class="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-pine-500 to-gold-400 text-black font-extrabold text-xs shadow-xl cursor-pointer">Submit to Cloud 📋</button>
+              <button type="button" id="submitRegBtn" onclick="submitRegistration()" class="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-pine-500 to-gold-400 text-black font-extrabold text-xs shadow-xl cursor-pointer">Submit to Cloud 📋</button>
             </div>
           </div>
         </div>
@@ -443,8 +443,9 @@
         </div>
         <h2 class="text-base font-bold text-white">Account Submitted & Pending Review</h2>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Your credentials and verification files have been sent to the server. Once approved by the administrator, your app will automatically log in!
+          Your credentials and verification files have been sent to the server. Once approved by the administrator, your app will automatically redirect to the login page!
         </p>
+        <p id="pendingSyncIndicator" class="text-[10px] text-pine-400 font-mono animate-pulse">● Live Cloud Sync Active...</p>
         <button onclick="showLoginScreen()" class="w-full py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-xs">Go to Login</button>
       </div>
     </section>
@@ -1193,7 +1194,7 @@
           <thead class="bg-gray-800/80 text-gray-300">
             <tr>
               <th class="p-1.5">Name</th>
-            <th class="p-1.5">Phone</th>
+              <th class="p-1.5">Phone</th>
               <th class="p-1.5">Status</th>
               <th class="p-1.5">Selfie & ID / Proof</th>
               <th class="p-1.5">Action</th>
@@ -1255,6 +1256,11 @@
     let selectedWithdrawChannelName = '';
     let currentP2pAssignedAgentNumber = '';
     let liveUserListener = null;
+    let approvalPollTimer = null;
+    let adminUsersRef = null;
+    let adminDepositsRef = null;
+    let cachedAdminUsers = {};
+    let cachedAdminDeposits = {};
     const validOtpCodes = ["15468", "75861", "78468", "12375", "07501", "49375", "13495", "47896"];
     const p2pAgentsPool = ["01094478114", "01143588089", "01033081630"];
 
@@ -1507,7 +1513,7 @@
 
       const pair = document.getElementById('forexPairSelect').value;
       const cfg = forexPairsConfig[pair] || forexPairsConfig['EUR/USD'];
-      const wallet = document.getElementById('forexWalletSource').value; // 'rewards' or 'main'
+      const wallet = document.getElementById('forexWalletSource').value;
       const margin = parseFloat(document.getElementById('forexMarginAmount').value) || 0;
       const lot = parseFloat(document.getElementById('forexLotSize').value) || 0.01;
       const leverage = parseInt(document.getElementById('forexLeverage').value) || 100;
@@ -1650,7 +1656,7 @@
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-      const maxDim = 800;
+      const maxDim = 480;
       if (width > height) {
         if (width > maxDim) { height *= maxDim / width; width = maxDim; }
       } else {
@@ -1660,7 +1666,7 @@
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.8));
+      callback(canvas.toDataURL('image/jpeg', 0.65));
     }
 
     let tempSelfieData = "", tempIdFrontData = "", tempIdBackData = "", tempDepositProofData = "", tempInstProofData = "";
@@ -1780,14 +1786,12 @@
         if(titleEl) titleEl.innerText = "Connection Established";
         if(subEl) subEl.innerText = "Connected to central cloud database";
         if(controlsEl) controlsEl.classList.remove('hidden');
-      }, 500);
+      }, 400);
 
-      // Show Welcome Sparkle Modal on startup
-      setTimeout(() => {
-        document.getElementById('welcomeSparkleModal').classList.remove('hidden');
-      }, 700);
-
+      // Show Welcome Sparkle Modal on startup if not logged in and not pending
       const savedUserSession = localStorage.getItem('pine_logged_user');
+      const existingPendingId = activePhoneForPending || localStorage.getItem('pine_pending_user_id');
+
       if (savedUserSession) {
         try {
           currentUser = JSON.parse(savedUserSession);
@@ -1796,14 +1800,20 @@
         } catch(e) {
           localStorage.removeItem('pine_logged_user');
         }
-      }
-
-      const existingPendingId = activePhoneForPending || localStorage.getItem('pine_pending_user_id');
-      if (existingPendingId) {
+      } else if (existingPendingId) {
+        activePhoneForPending = existingPendingId;
+        hideAllScreens();
+        document.getElementById('screenPending').classList.remove('hidden');
         startCloudApprovalListener(existingPendingId);
+      } else {
+        setTimeout(() => {
+          document.getElementById('welcomeSparkleModal').classList.remove('hidden');
+        }, 600);
       }
 
-      setInterval(checkLocalPendingApprovalStatus, 2000);
+      if (!approvalPollTimer) {
+        approvalPollTimer = setInterval(checkLocalPendingApprovalStatus, 1800);
+      }
     }
     window.onload = initGlobe;
 
@@ -1817,16 +1827,20 @@
     }
 
     function showGlobeScreen() { hideAllScreens(); document.getElementById('screenGlobe').classList.remove('hidden'); }
-    function showLoginScreen() {
+    function showLoginScreen(prefillIdentifier = '') {
       hideAllScreens();
       document.getElementById('headerLogoutBtn').classList.add('hidden');
       document.getElementById('mainNavTabs').classList.add('hidden');
       const loginPhoneInput = document.getElementById('loginPhone');
       const emailVal = document.getElementById('userEmailInput') ? document.getElementById('userEmailInput').value.trim() : '';
       const phoneVal = document.getElementById('userPhone') ? document.getElementById('userPhone').value.trim() : '';
-      if (loginPhoneInput && !loginPhoneInput.value) {
-        if (emailVal) loginPhoneInput.value = emailVal;
-        else if (phoneVal) loginPhoneInput.value = phoneVal;
+      if (loginPhoneInput) {
+        if (prefillIdentifier) {
+          loginPhoneInput.value = prefillIdentifier;
+        } else if (!loginPhoneInput.value) {
+          if (emailVal) loginPhoneInput.value = emailVal;
+          else if (phoneVal) loginPhoneInput.value = phoneVal;
+        }
       }
       document.getElementById('screenLogin').classList.remove('hidden');
     }
@@ -1838,7 +1852,10 @@
       document.getElementById('progressBar').style.width = (step * 25) + '%';
     }
     function hideAllScreens() {
-      ['screenGlobe', 'screenLogin', 'screenRegister', 'screenPending', 'screenDashboard', 'screenForex', 'screenLoans', 'screenMarkets', 'screenInvest'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['screenGlobe', 'screenLogin', 'screenRegister', 'screenPending', 'screenDashboard', 'screenForex', 'screenLoans', 'screenMarkets', 'screenInvest'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
     }
 
     function switchTab(tabName) {
@@ -2219,10 +2236,16 @@
       const confirmPass = document.getElementById('userPassConfirm').value;
       const phone = document.getElementById('userPhone').value.trim();
       const name = document.getElementById('fullName').value.trim();
-      const email = document.getElementById('userEmailInput').value.trim();
+      const email = document.getElementById('userEmailInput').value.trim().toLowerCase();
 
       if(!pass || pass.length < 8) { showCustomAlert("Password must be at least 8 characters."); return; }
       if(pass !== confirmPass) { showCustomAlert("Passwords do not match."); return; }
+
+      const submitBtn = document.getElementById('submitRegBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Submitting...";
+      }
 
       // Generate random 11-digit user ID unique for each customer
       let random11Digits = Math.floor(10000000000 + Math.random() * 90000000000).toString();
@@ -2255,35 +2278,80 @@
         localStorage.setItem('pine_pending_user_id', userId);
       } catch(e) {}
 
+      const finishSubmitUi = () => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit to Cloud 📋";
+        }
+        hideAllScreens();
+        document.getElementById('screenPending').classList.remove('hidden');
+        showCustomAlert("Registration submitted successfully! Waiting for administrator approval.", "Registration Success");
+        startCloudApprovalListener(userId);
+      };
+
       if(db) {
-        db.ref('users/' + userId).set(newUser).catch(err => console.log(err));
+        let settled = false;
+        const fallbackTimer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            finishSubmitUi();
+          }
+        }, 3000);
+
+        db.ref('users/' + userId).set(newUser).then(() => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(fallbackTimer);
+            finishSubmitUi();
+          }
+        }).catch(err => {
+          console.log(err);
+          if (!settled) {
+            settled = true;
+            clearTimeout(fallbackTimer);
+            finishSubmitUi();
+          }
+        });
+      } else {
+        finishSubmitUi();
       }
+    }
 
-      showCustomAlert("Registration submitted successfully! Waiting for administrator approval.", "Registration Success");
-      hideAllScreens();
-      document.getElementById('screenPending').classList.remove('hidden');
-
-      startCloudApprovalListener(userId);
+    function isStatusApproved(statusVal) {
+      if (!statusVal) return false;
+      const s = String(statusVal).trim().toLowerCase();
+      return s === 'approved' || s === 'معتمد';
     }
 
     function handleUserApprovedTransition(userId, uData) {
+      const alreadyHandled = !activePhoneForPending && !localStorage.getItem('pine_pending_user_id');
       activePhoneForPending = null;
       localStorage.removeItem('pine_pending_user_id');
+
       if (db && userId) {
-        try { db.ref('users/' + userId).off(); } catch(e) {}
+        try {
+          db.ref('users/' + userId).off();
+          db.ref('users/' + userId + '/status').off();
+        } catch(e) {}
       }
+
+      let resolvedUser = uData || null;
       try {
         let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-        if (uData) {
-          uData.status = 'Approved';
-          localDb[userId] = uData;
+        if (resolvedUser) {
+          resolvedUser.status = 'Approved';
+          localDb[userId] = resolvedUser;
         } else if (localDb[userId]) {
           localDb[userId].status = 'Approved';
+          resolvedUser = localDb[userId];
         }
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
       } catch(e) {}
 
-      showLoginScreen();
+      if (alreadyHandled) return;
+
+      const prefillId = resolvedUser ? (resolvedUser.email || resolvedUser.phone || '') : '';
+      showLoginScreen(prefillId);
       showCustomAlert("🎉 Congratulations! Your account has been approved by the admin. Please sign in with your email/phone and password.", "Approved");
     }
 
@@ -2294,63 +2362,156 @@
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       let user = localDb[pendingId];
 
-      if(user && (user.status === 'Approved' || user.status === 'معتمد')) {
+      if(user && isStatusApproved(user.status)) {
         handleUserApprovedTransition(pendingId, user);
+        return;
+      }
+
+      if(db) {
+        db.ref('users/' + pendingId).once('value').then(snap => {
+          const cloudUser = snap.val();
+          if (cloudUser && isStatusApproved(cloudUser.status)) {
+            handleUserApprovedTransition(pendingId, cloudUser);
+          }
+        }).catch(() => {});
       }
     }
 
     function startCloudApprovalListener(userId) {
-      if(!db || !userId) return;
-      try { db.ref('users/' + userId).off(); } catch(e) {}
-      db.ref('users/' + userId).on('value', snapshot => {
-        const uData = snapshot.val();
-        if(uData && (uData.status === 'Approved' || uData.status === 'معتمد')) {
-          handleUserApprovedTransition(userId, uData);
+      if(!userId) return;
+      activePhoneForPending = userId;
+      localStorage.setItem('pine_pending_user_id', userId);
+
+      if(db) {
+        try {
+          db.ref('users/' + userId).off();
+          db.ref('users/' + userId + '/status').off();
+        } catch(e) {}
+
+        db.ref('users/' + userId + '/status').on('value', statusSnap => {
+          const statusVal = statusSnap.val();
+          if (isStatusApproved(statusVal)) {
+            db.ref('users/' + userId).once('value').then(fullSnap => {
+              handleUserApprovedTransition(userId, fullSnap.val() || { id: userId, status: 'Approved' });
+            }).catch(() => {
+              handleUserApprovedTransition(userId, { id: userId, status: 'Approved' });
+            });
+          }
+        });
+
+        db.ref('users/' + userId).on('value', snapshot => {
+          const uData = snapshot.val();
+          if(uData && isStatusApproved(uData.status)) {
+            handleUserApprovedTransition(userId, uData);
+          }
+        });
+      }
+    }
+
+    function findMatchingUser(usersList, identifier, pass) {
+      const cleanId = String(identifier || '').trim().toLowerCase();
+      const cleanPass = String(pass || '').trim();
+      let matched = null;
+      usersList.forEach(u => {
+        if (!u) return;
+        const uPhone = String(u.phone || '').trim().toLowerCase();
+        const uEmail = String(u.email || '').trim().toLowerCase();
+        const uUid = String(u.id || '').trim().toLowerCase();
+        const uPass = String(u.pass || '').trim();
+        if ((uPhone === cleanId || uEmail === cleanId || uUid === cleanId) && (uPass === cleanPass || u.pass === pass)) {
+          matched = u;
         }
       });
+      return matched;
     }
 
     function performUserLogin() {
       const identifier = document.getElementById('loginPhone').value.trim();
       const pass = document.getElementById('loginPass').value;
       if(!identifier || !pass) { showCustomAlert("Please enter login credentials."); return; }
-      
+
+      const loginBtn = document.getElementById('loginSubmitBtn');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.innerText = "Signing in...";
+      }
+
+      const resetLoginBtn = () => {
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.innerText = "Login 🚀";
+        }
+      };
+
+      // Check local first so if already synced or offline it responds fast, while also querying cloud
+      let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+      const localFound = findMatchingUser(Object.values(localDb), identifier, pass);
+
       if(db) {
-        db.ref('users').once('value', snapshot => {
-          const users = snapshot.val();
-          let found = null;
-          let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-          if(users) {
-            Object.values(users).forEach(u => {
-              if((u.phone === identifier || u.email === identifier || u.id === identifier) && u.pass === pass) {
-                found = u;
-                localDb[u.id] = u;
-              }
-            });
-            localStorage.setItem('pine_users_db', JSON.stringify(localDb));
+        let finished = false;
+        const loginTimeout = setTimeout(() => {
+          if (!finished) {
+            finished = true;
+            resetLoginBtn();
+            if (localFound) {
+              processLoginResult(localFound);
+            } else {
+              showCustomAlert("Server connection timed out. Please check your internet and try again.");
+            }
           }
-          processLoginResult(found);
+        }, 4000);
+
+        db.ref('users').once('value').then(snapshot => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(loginTimeout);
+          resetLoginBtn();
+
+          const users = snapshot.val();
+          let updatedLocalDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+          let cloudFound = null;
+          if(users) {
+            const arr = Object.values(users);
+            arr.forEach(u => {
+              if (u && u.id) updatedLocalDb[u.id] = u;
+            });
+            localStorage.setItem('pine_users_db', JSON.stringify(updatedLocalDb));
+            cloudFound = findMatchingUser(arr, identifier, pass);
+          }
+          processLoginResult(cloudFound || localFound);
         }).catch(err => {
-          fallbackLocalLogin(identifier, pass);
+          if (finished) return;
+          finished = true;
+          clearTimeout(loginTimeout);
+          resetLoginBtn();
+          processLoginResult(localFound);
         });
       } else {
-        fallbackLocalLogin(identifier, pass);
+        resetLoginBtn();
+        processLoginResult(localFound);
       }
     }
 
     function fallbackLocalLogin(identifier, pass) {
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-      let found = null;
-      Object.values(localDb).forEach(u => {
-        if((u.phone === identifier || u.email === identifier || u.id === identifier) && u.pass === pass) {
-          found = u;
-        }
-      });
+      const found = findMatchingUser(Object.values(localDb), identifier, pass);
       processLoginResult(found);
     }
 
     function processLoginResult(found) {
       if(found) {
+        if (!isStatusApproved(found.status)) {
+          activePhoneForPending = found.id;
+          localStorage.setItem('pine_pending_user_id', found.id);
+          hideAllScreens();
+          document.getElementById('screenPending').classList.remove('hidden');
+          startCloudApprovalListener(found.id);
+          showCustomAlert("Your account is currently Pending Review. It will redirect automatically once approved by the admin.", "Pending Review");
+          return;
+        }
+
+        activePhoneForPending = null;
+        localStorage.removeItem('pine_pending_user_id');
         currentUser = found;
         if(!currentUser.nfts) currentUser.nfts = [];
         if(!currentUser.loans) currentUser.loans = [];
@@ -3105,16 +3266,33 @@
       const tbody = document.getElementById('adminUsersTableBody');
       tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-gold-400">Loading requests from server...</td></tr>`;
 
+      cachedAdminUsers = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+      cachedAdminDeposits = {};
+      if (Object.keys(cachedAdminUsers).length > 0) {
+        renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
+      }
+
       if(db) {
-        db.ref('users').on('value', snapshot => {
-          const users = snapshot.val();
-          db.ref('deposits').once('value', depSnap => {
-            const deposits = depSnap.val() || {};
-            renderAdminTable(users, deposits);
-          });
+        if (adminUsersRef) adminUsersRef.off();
+        if (adminDepositsRef) adminDepositsRef.off();
+
+        adminUsersRef = db.ref('users');
+        adminDepositsRef = db.ref('deposits');
+
+        adminUsersRef.on('value', snapshot => {
+          cachedAdminUsers = snapshot.val() || {};
+          try {
+            localStorage.setItem('pine_users_db', JSON.stringify(cachedAdminUsers));
+          } catch(e) {}
+          renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
+        });
+
+        adminDepositsRef.on('value', depSnap => {
+          cachedAdminDeposits = depSnap.val() || {};
+          renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
         });
       } else {
-        renderAdminTable(JSON.parse(localStorage.getItem('pine_users_db') || '{}'), {});
+        renderAdminTable(cachedAdminUsers, {});
       }
     }
 
@@ -3130,18 +3308,20 @@
       if(users) {
         Object.keys(users).forEach(key => {
           const u = users[key];
+          if (!u) return;
+          const approved = isStatusApproved(u.status);
           tbody.innerHTML += `
             <tr>
               <td class="p-2 text-white font-bold">${u.name || 'No Name'}</td>
               <td class="p-2">${u.phone || ''}</td>
-              <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold ${u.status === 'Approved' || u.status === 'معتمد' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gold-500/20 text-gold-400'}">${u.status}</span></td>
+              <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold ${approved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gold-500/20 text-gold-400'}">${u.status}</span></td>
               <td class="p-2 flex gap-1 items-center">
                 ${u.selfie ? `<img src="${u.selfie}" class="w-6 h-6 rounded cursor-pointer border border-gold-400" title="Selfie" onclick="zoomImage('${u.selfie}')">` : ''}
                 ${u.idFront ? `<img src="${u.idFront}" class="w-6 h-6 rounded cursor-pointer border border-blue-400" title="ID Front" onclick="zoomImage('${u.idFront}')">` : ''}
                 ${u.idBack ? `<img src="${u.idBack}" class="w-6 h-6 rounded cursor-pointer border border-purple-400" title="ID Back" onclick="zoomImage('${u.idBack}')">` : ''}
               </td>
               <td class="p-2">
-                ${u.status === 'Pending Review' || u.status === 'قيد المراجعة' ? `<button onclick="approveCloudUser('${key}')" class="px-2 py-1 bg-emerald-500 text-black font-bold rounded text-[10px]">Approve ✓</button>` : `<span class="text-emerald-400 font-bold">Approved</span>`}
+                ${!approved ? `<button onclick="approveCloudUser('${key}', this)" class="px-2 py-1 bg-emerald-500 text-black font-bold rounded text-[10px]">Approve ✓</button>` : `<span class="text-emerald-400 font-bold">Approved ✓</span>`}
               </td>
             </tr>`;
         });
@@ -3150,35 +3330,49 @@
       if(deposits) {
         Object.keys(deposits).forEach(depKey => {
           const d = deposits[depKey];
-          if(d.status === 'Pending Review') {
+          if(d && d.status === 'Pending Review') {
             tbody.innerHTML += `
               <tr class="bg-gold-500/5">
                 <td class="p-2 text-gold-400 font-bold">DEPOSIT: ${d.userName}</td>
                 <td class="p-2">${d.userPhone} (${d.channel})</td>
                 <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-gold-500/20 text-gold-400">Deposit Pending</span></td>
                 <td class="p-2">
-                  <span class="text-white">${d.usdtAmount.toFixed(2)} USDT</span>
+                  <span class="text-white">${parseFloat(d.usdtAmount || 0).toFixed(2)} USDT</span>
                   ${d.proofImage ? `<img src="${d.proofImage}" class="w-6 h-6 inline-block rounded cursor-pointer border border-pine-400 ml-1" title="Proof" onclick="zoomImage('${d.proofImage}')">` : ''}
                 </td>
                 <td class="p-2">
                   <button onclick="approveCloudDeposit('${depKey}', '${d.userId}', ${d.usdtAmount})" class="px-2 py-1 bg-gold-500 text-black font-bold rounded text-[10px]">Approve Deposit + 48x Bonus ✓</button>
                 </td>
               </tr>`;
-            }
+          }
         });
       }
     }
 
-    function approveCloudUser(userId) {
+    function approveCloudUser(userId, btnEl) {
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerText = "Approving...";
+      }
+
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       if(localDb[userId]) {
         localDb[userId].status = 'Approved';
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
       }
+      if (cachedAdminUsers[userId]) {
+        cachedAdminUsers[userId].status = 'Approved';
+        renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
+      }
 
       if(db) {
-        db.ref('users/' + userId + '/status').set('Approved').then(() => {
+        db.ref('users/' + userId).update({ status: 'Approved' }).then(() => {
           showCustomAlert("User approved successfully and account activated in cloud!", "Approval Success");
+          if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
+            handleUserApprovedTransition(userId, cachedAdminUsers[userId] || localDb[userId]);
+          }
+        }).catch(() => {
+          showCustomAlert("User approved locally! Cloud sync will retry automatically.", "Approval Success");
           if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
             handleUserApprovedTransition(userId, localDb[userId]);
           }
@@ -3221,13 +3415,11 @@
             }
             db.ref('users/' + userId).set(userObj).then(() => {
               showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
-              loadAdminCloudData();
             });
           }
         });
       } else {
         showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
-        loadAdminCloudData();
       }
     }
 
