@@ -1827,19 +1827,28 @@
     }
 
     function showGlobeScreen() { hideAllScreens(); document.getElementById('screenGlobe').classList.remove('hidden'); }
-    function showLoginScreen(prefillIdentifier = '') {
+    function showLoginScreen(prefillIdentifier = '', prefillPassword = '') {
       hideAllScreens();
       document.getElementById('headerLogoutBtn').classList.add('hidden');
       document.getElementById('mainNavTabs').classList.add('hidden');
       const loginPhoneInput = document.getElementById('loginPhone');
+      const loginPassInput = document.getElementById('loginPass');
       const emailVal = document.getElementById('userEmailInput') ? document.getElementById('userEmailInput').value.trim() : '';
       const phoneVal = document.getElementById('userPhone') ? document.getElementById('userPhone').value.trim() : '';
+      const regPassVal = document.getElementById('userPass') ? document.getElementById('userPass').value : '';
       if (loginPhoneInput) {
         if (prefillIdentifier) {
           loginPhoneInput.value = prefillIdentifier;
         } else if (!loginPhoneInput.value) {
           if (emailVal) loginPhoneInput.value = emailVal;
           else if (phoneVal) loginPhoneInput.value = phoneVal;
+        }
+      }
+      if (loginPassInput) {
+        if (prefillPassword) {
+          loginPassInput.value = prefillPassword;
+        } else if (!loginPassInput.value && regPassVal) {
+          loginPassInput.value = regPassVal;
         }
       }
       document.getElementById('screenLogin').classList.remove('hidden');
@@ -2296,7 +2305,7 @@
             settled = true;
             finishSubmitUi();
           }
-        }, 3000);
+        }, 2500);
 
         db.ref('users/' + userId).set(newUser).then(() => {
           if (!settled) {
@@ -2351,7 +2360,8 @@
       if (alreadyHandled) return;
 
       const prefillId = resolvedUser ? (resolvedUser.email || resolvedUser.phone || '') : '';
-      showLoginScreen(prefillId);
+      const prefillPass = resolvedUser ? (resolvedUser.pass || '') : '';
+      showLoginScreen(prefillId, prefillPass);
       showCustomAlert("🎉 Congratulations! Your account has been approved by the admin. Please sign in with your email/phone and password.", "Approved");
     }
 
@@ -2430,12 +2440,20 @@
       const pass = document.getElementById('loginPass').value;
       if(!identifier || !pass) { showCustomAlert("Please enter login credentials."); return; }
 
+      let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+      const localFound = findMatchingUser(Object.values(localDb), identifier, pass);
+
+      // If found locally and already approved, enter immediately without waiting
+      if (localFound && isStatusApproved(localFound.status)) {
+        processLoginResult(localFound);
+        return;
+      }
+
       const loginBtn = document.getElementById('loginSubmitBtn');
       if (loginBtn) {
         loginBtn.disabled = true;
         loginBtn.innerText = "Signing in...";
       }
-
       const resetLoginBtn = () => {
         if (loginBtn) {
           loginBtn.disabled = false;
@@ -2443,46 +2461,38 @@
         }
       };
 
-      // Check local first so if already synced or offline it responds fast, while also querying cloud
-      let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-      const localFound = findMatchingUser(Object.values(localDb), identifier, pass);
-
       if(db) {
         let finished = false;
-        const loginTimeout = setTimeout(() => {
+        const fallbackTimer = setTimeout(() => {
           if (!finished) {
             finished = true;
             resetLoginBtn();
-            if (localFound) {
-              processLoginResult(localFound);
-            } else {
-              showCustomAlert("Server connection timed out. Please check your internet and try again.");
-            }
+            processLoginResult(localFound);
           }
-        }, 4000);
+        }, 2500);
 
         db.ref('users').once('value').then(snapshot => {
           if (finished) return;
           finished = true;
-          clearTimeout(loginTimeout);
+          clearTimeout(fallbackTimer);
           resetLoginBtn();
 
           const users = snapshot.val();
-          let updatedLocalDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
           let cloudFound = null;
           if(users) {
             const arr = Object.values(users);
+            let updatedLocalDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
             arr.forEach(u => {
               if (u && u.id) updatedLocalDb[u.id] = u;
             });
-            localStorage.setItem('pine_users_db', JSON.stringify(updatedLocalDb));
+            try { localStorage.setItem('pine_users_db', JSON.stringify(updatedLocalDb)); } catch(e) {}
             cloudFound = findMatchingUser(arr, identifier, pass);
           }
           processLoginResult(cloudFound || localFound);
         }).catch(err => {
           if (finished) return;
           finished = true;
-          clearTimeout(loginTimeout);
+          clearTimeout(fallbackTimer);
           resetLoginBtn();
           processLoginResult(localFound);
         });
@@ -2500,16 +2510,6 @@
 
     function processLoginResult(found) {
       if(found) {
-        if (!isStatusApproved(found.status)) {
-          activePhoneForPending = found.id;
-          localStorage.setItem('pine_pending_user_id', found.id);
-          hideAllScreens();
-          document.getElementById('screenPending').classList.remove('hidden');
-          startCloudApprovalListener(found.id);
-          showCustomAlert("Your account is currently Pending Review. It will redirect automatically once approved by the admin.", "Pending Review");
-          return;
-        }
-
         activePhoneForPending = null;
         localStorage.removeItem('pine_pending_user_id');
         currentUser = found;
