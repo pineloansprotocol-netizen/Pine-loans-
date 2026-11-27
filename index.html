@@ -1882,6 +1882,7 @@
         document.getElementById('screenDashboard').classList.remove('hidden');
         document.getElementById('navTabDashboard').className = "px-3 py-1.5 rounded-xl bg-pine-500 text-black flex items-center gap-1 whitespace-nowrap";
         fetchHomeMarketTicker();
+        updateDashboardBalancesUI();
       } else if(tabName === 'forex') {
         document.getElementById('screenForex').classList.remove('hidden');
         document.getElementById('navTabForex').className = "px-3 py-1.5 rounded-xl bg-emerald-500 text-black flex items-center gap-1 whitespace-nowrap";
@@ -1903,50 +1904,74 @@
       }
     }
 
+    // --- الإصلاح الرئيسي لمزامنة الرصيد من السحابة دون تعارض مع الذاكرة المحلية ---
     function attachUserRealtimeListener() {
       if(!currentUser || !currentUser.id) return;
-      
-      setInterval(() => {
-        let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-        if(currentUser && localDb[currentUser.id]) {
-          let updated = localDb[currentUser.id];
-          if(updated.balance !== currentUser.balance || updated.rewardsBalance !== currentUser.rewardsBalance) {
-            currentUser.balance = updated.balance;
-            currentUser.rewardsBalance = updated.rewardsBalance;
-            localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
-            updateDashboardBalancesUI();
-          }
-        }
-      }, 1500);
 
+      // جلب القيمة الأحدث من السحابة فوراً عند الدخول أو عمل رفرش
       if(db) {
+        db.ref('users/' + currentUser.id).once('value').then(initialSnap => {
+          const initialData = initialSnap.val();
+          if(initialData && currentUser) {
+            currentUser.balance = parseFloat(initialData.balance) || 0;
+            currentUser.rewardsBalance = parseFloat(initialData.rewardsBalance) || 0;
+            currentUser.rewardsGranted = Boolean(initialData.rewardsGranted);
+            currentUser.nfts = initialData.nfts || currentUser.nfts || [];
+            currentUser.loans = initialData.loans || currentUser.loans || [];
+            currentUser.virtualTrades = initialData.virtualTrades || currentUser.virtualTrades || [];
+            currentUser.forexPositions = initialData.forexPositions || currentUser.forexPositions || [];
+            currentUser.forexHistory = initialData.forexHistory || currentUser.forexHistory || [];
+            currentUser.lastDepositChannel = initialData.lastDepositChannel || currentUser.lastDepositChannel;
+
+            localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+            let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+            localDb[currentUser.id] = currentUser;
+            try { localStorage.setItem('pine_users_db', JSON.stringify(localDb)); } catch(e) {}
+
+            updateDashboardBalancesUI();
+            renderUserNfts();
+            renderDashboardInstallments();
+          }
+        }).catch(() => {});
+
         if(liveUserListener) db.ref('users/' + currentUser.id).off();
         liveUserListener = db.ref('users/' + currentUser.id).on('value', snapshot => {
           const freshData = snapshot.val();
-          if(freshData) {
-            currentUser.balance = freshData.balance || 0;
-            currentUser.rewardsBalance = freshData.rewardsBalance || 0;
+          if(freshData && currentUser) {
+            currentUser.balance = parseFloat(freshData.balance) || 0;
+            currentUser.rewardsBalance = parseFloat(freshData.rewardsBalance) || 0;
+            currentUser.rewardsGranted = Boolean(freshData.rewardsGranted);
             currentUser.nfts = freshData.nfts || currentUser.nfts || [];
             currentUser.loans = freshData.loans || currentUser.loans || [];
             currentUser.virtualTrades = freshData.virtualTrades || currentUser.virtualTrades || [];
             currentUser.forexPositions = freshData.forexPositions || currentUser.forexPositions || [];
             currentUser.forexHistory = freshData.forexHistory || currentUser.forexHistory || [];
+            currentUser.lastDepositChannel = freshData.lastDepositChannel || currentUser.lastDepositChannel;
+
             localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+            let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+            localDb[currentUser.id] = currentUser;
+            try { localStorage.setItem('pine_users_db', JSON.stringify(localDb)); } catch(e) {}
+
             updateDashboardBalancesUI();
+            renderUserNfts();
+            renderDashboardInstallments();
           }
         });
       }
     }
 
     function updateDashboardBalancesUI() {
-      if(!document.getElementById('screenDashboard').classList.contains('hidden')) {
-        document.getElementById('mainUserBalance').innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)} USDT`;
-        document.getElementById('rewardsUserBalance').innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)} USDT`;
-      }
+      if(!currentUser) return;
+      const mainBalEl = document.getElementById('mainUserBalance');
+      const rewBalEl = document.getElementById('rewardsUserBalance');
+      if (mainBalEl) mainBalEl.innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)} USDT`;
+      if (rewBalEl) rewBalEl.innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)} USDT`;
+
       const mainEl = document.getElementById('forexMainBalText');
       const rewEl = document.getElementById('forexRewardsBalText');
-      if (mainEl && currentUser) mainEl.innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)}`;
-      if (rewEl && currentUser) rewEl.innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)}`;
+      if (mainEl) mainEl.innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)}`;
+      if (rewEl) rewEl.innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)}`;
     }
 
     async function fetchHomeMarketTicker() {
@@ -2876,12 +2901,11 @@
     }
 
     function updateUserCloud() {
+      if(!currentUser || !currentUser.id) return;
       localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-      if(localDb[currentUser.id]) {
-        localDb[currentUser.id] = currentUser;
-        localStorage.setItem('pine_users_db', JSON.stringify(localDb));
-      }
+      localDb[currentUser.id] = currentUser;
+      try { localStorage.setItem('pine_users_db', JSON.stringify(localDb)); } catch(e) {}
       if(db) {
         db.ref('users/' + currentUser.id).set(currentUser);
       }
@@ -2936,6 +2960,7 @@
 
     function renderUserNfts() {
       const container = document.getElementById('userNftContainer');
+      if(!container || !currentUser) return;
       container.innerHTML = "";
       if(!currentUser.nfts || currentUser.nfts.length === 0) {
         container.innerHTML = `<p class="text-[11px] text-gray-400 text-center py-2">No NFT assets currently. Mint or purchase from marketplace to enable instant collateral loans.</p>`;
@@ -3254,6 +3279,7 @@
 
     function renderDashboardInstallments() {
       const container = document.getElementById('dashboardInstallmentsContainer');
+      if(!container || !currentUser) return;
       container.innerHTML = "";
       if(!currentUser.loans || currentUser.loans.length === 0) {
         container.innerHTML = `<p class="text-[10px] text-gray-400 text-center py-2">No active loan installments pending.</p>`;
@@ -3407,40 +3433,64 @@
     }
 
     function approveCloudDeposit(depId, userId, usdtAmount) {
+      const numericAmount = parseFloat(usdtAmount) || 0;
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-      if(localDb[userId]) {
-        localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + usdtAmount;
-        if(!localDb[userId].rewardsGranted) {
-          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 48);
-          localDb[userId].rewardsGranted = true;
-        }
-        localStorage.setItem('pine_users_db', JSON.stringify(localDb));
-
-        if(currentUser && currentUser.id === userId) {
-          currentUser.balance = localDb[userId].balance;
-          currentUser.rewardsBalance = localDb[userId].rewardsBalance;
-          localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
-          updateDashboardBalancesUI();
-        }
-      }
 
       if(db) {
         db.ref('deposits/' + depId + '/status').set('Approved');
-        db.ref('users/' + userId).once('value', snap => {
-          let userObj = snap.val();
+        db.ref('users/' + userId).once('value').then(snap => {
+          let userObj = snap.val() || localDb[userId];
           if(userObj) {
-            userObj.balance = (parseFloat(userObj.balance) || 0) + usdtAmount;
-            if(!userObj.rewardsGranted) {
-              userObj.rewardsBalance = (parseFloat(userObj.rewardsBalance) || 0) + (usdtAmount * 48);
-              userObj.rewardsGranted = true;
+            const updatedBalance = (parseFloat(userObj.balance) || 0) + numericAmount;
+            let updatedRewards = parseFloat(userObj.rewardsBalance) || 0;
+            let grantedFlag = Boolean(userObj.rewardsGranted);
+            if(!grantedFlag) {
+              updatedRewards += (numericAmount * 48);
+              grantedFlag = true;
             }
-            db.ref('users/' + userId).set(userObj).then(() => {
-              showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
+
+            userObj.balance = updatedBalance;
+            userObj.rewardsBalance = updatedRewards;
+            userObj.rewardsGranted = grantedFlag;
+
+            localDb[userId] = userObj;
+            try { localStorage.setItem('pine_users_db', JSON.stringify(localDb)); } catch(e) {}
+
+            if(currentUser && currentUser.id === userId) {
+              currentUser.balance = updatedBalance;
+              currentUser.rewardsBalance = updatedRewards;
+              currentUser.rewardsGranted = grantedFlag;
+              localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+              updateDashboardBalancesUI();
+            }
+
+            db.ref('users/' + userId).update({
+              balance: updatedBalance,
+              rewardsBalance: updatedRewards,
+              rewardsGranted: grantedFlag
+            }).then(() => {
+              showCustomAlert(`Deposit approved! Added ${numericAmount.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
             });
           }
         });
       } else {
-        showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
+        if(localDb[userId]) {
+          localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + numericAmount;
+          if(!localDb[userId].rewardsGranted) {
+            localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (numericAmount * 48);
+            localDb[userId].rewardsGranted = true;
+          }
+          localStorage.setItem('pine_users_db', JSON.stringify(localDb));
+
+          if(currentUser && currentUser.id === userId) {
+            currentUser.balance = localDb[userId].balance;
+            currentUser.rewardsBalance = localDb[userId].rewardsBalance;
+            currentUser.rewardsGranted = localDb[userId].rewardsGranted;
+            localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+            updateDashboardBalancesUI();
+          }
+        }
+        showCustomAlert(`Deposit approved! Added ${numericAmount.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
       }
     }
 
