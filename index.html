@@ -1794,9 +1794,14 @@
 
       if (savedUserSession) {
         try {
-          currentUser = JSON.parse(savedUserSession);
-          renderDashboard();
-          attachUserRealtimeListener();
+          const parsedSession = JSON.parse(savedUserSession);
+          if (parsedSession && isStatusApproved(parsedSession.status)) {
+            currentUser = parsedSession;
+            renderDashboard();
+            attachUserRealtimeListener();
+          } else {
+            localStorage.removeItem('pine_logged_user');
+          }
         } catch(e) {
           localStorage.removeItem('pine_logged_user');
         }
@@ -2256,10 +2261,16 @@
         submitBtn.innerText = "Submitting...";
       }
 
+      const resetSubmitBtn = () => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit to Cloud 📋";
+        }
+      };
+
       // Generate random 11-digit user ID unique for each customer
       let random11Digits = Math.floor(10000000000 + Math.random() * 90000000000).toString();
       const userId = random11Digits;
-      activePhoneForPending = userId;
 
       const newUser = {
         id: userId,
@@ -2280,49 +2291,51 @@
         forexHistory: []
       };
 
-      try {
-        let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-        localDb[userId] = newUser;
-        localStorage.setItem('pine_users_db', JSON.stringify(localDb));
-        localStorage.setItem('pine_pending_user_id', userId);
-      } catch(e) {}
+      const finishSubmitUi = (cloudSaved) => {
+        resetSubmitBtn();
+        activePhoneForPending = userId;
+        try {
+          let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+          localDb[userId] = newUser;
+          localStorage.setItem('pine_users_db', JSON.stringify(localDb));
+          localStorage.setItem('pine_pending_user_id', userId);
+        } catch(e) {}
 
-      const finishSubmitUi = () => {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerText = "Submit to Cloud 📋";
-        }
         hideAllScreens();
         document.getElementById('screenPending').classList.remove('hidden');
-        showCustomAlert("Registration submitted successfully! Waiting for administrator approval.", "Registration Success");
+        if (cloudSaved) {
+          showCustomAlert("Registration submitted successfully to cloud! Waiting for administrator approval.", "Registration Success");
+        } else {
+          showCustomAlert("Saved locally, but cloud sync could not be confirmed. Check your internet connection or Firebase Realtime Database rules so the admin receives your request.", "Cloud Sync Notice");
+        }
         startCloudApprovalListener(userId);
       };
 
       if(db) {
         let settled = false;
-        const fallbackTimer = setTimeout(() => {
+        const cloudTimeout = setTimeout(() => {
           if (!settled) {
             settled = true;
-            finishSubmitUi();
+            finishSubmitUi(false);
           }
-        }, 2500);
+        }, 7000);
 
         db.ref('users/' + userId).set(newUser).then(() => {
           if (!settled) {
             settled = true;
-            clearTimeout(fallbackTimer);
-            finishSubmitUi();
+            clearTimeout(cloudTimeout);
+            finishSubmitUi(true);
           }
         }).catch(err => {
-          console.log(err);
+          console.log("Cloud registration write error:", err);
           if (!settled) {
             settled = true;
-            clearTimeout(fallbackTimer);
-            finishSubmitUi();
+            clearTimeout(cloudTimeout);
+            finishSubmitUi(false);
           }
         });
       } else {
-        finishSubmitUi();
+        finishSubmitUi(false);
       }
     }
 
@@ -2372,18 +2385,21 @@
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       let user = localDb[pendingId];
 
-      if(user && isStatusApproved(user.status)) {
-        handleUserApprovedTransition(pendingId, user);
-        return;
-      }
-
       if(db) {
         db.ref('users/' + pendingId).once('value').then(snap => {
           const cloudUser = snap.val();
           if (cloudUser && isStatusApproved(cloudUser.status)) {
             handleUserApprovedTransition(pendingId, cloudUser);
+          } else if (!cloudUser && user && isStatusApproved(user.status)) {
+            handleUserApprovedTransition(pendingId, user);
           }
-        }).catch(() => {});
+        }).catch(() => {
+          if (user && isStatusApproved(user.status)) {
+            handleUserApprovedTransition(pendingId, user);
+          }
+        });
+      } else if (user && isStatusApproved(user.status)) {
+        handleUserApprovedTransition(pendingId, user);
       }
     }
 
@@ -2443,12 +2459,6 @@
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       const localFound = findMatchingUser(Object.values(localDb), identifier, pass);
 
-      // If found locally and already approved, enter immediately without waiting
-      if (localFound && isStatusApproved(localFound.status)) {
-        processLoginResult(localFound);
-        return;
-      }
-
       const loginBtn = document.getElementById('loginSubmitBtn');
       if (loginBtn) {
         loginBtn.disabled = true;
@@ -2469,7 +2479,7 @@
             resetLoginBtn();
             processLoginResult(localFound);
           }
-        }, 2500);
+        }, 4000);
 
         db.ref('users').once('value').then(snapshot => {
           if (finished) return;
@@ -2509,21 +2519,32 @@
     }
 
     function processLoginResult(found) {
-      if(found) {
-        activePhoneForPending = null;
-        localStorage.removeItem('pine_pending_user_id');
-        currentUser = found;
-        if(!currentUser.nfts) currentUser.nfts = [];
-        if(!currentUser.loans) currentUser.loans = [];
-        if(!currentUser.virtualTrades) currentUser.virtualTrades = [];
-        if(!currentUser.forexPositions) currentUser.forexPositions = [];
-        if(!currentUser.forexHistory) currentUser.forexHistory = [];
-        localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
-        renderDashboard();
-        attachUserRealtimeListener();
-      } else {
+      if (!found) {
         showCustomAlert("Invalid login credentials or account not found.");
+        return;
       }
+
+      if (!isStatusApproved(found.status)) {
+        activePhoneForPending = found.id;
+        localStorage.setItem('pine_pending_user_id', found.id);
+        hideAllScreens();
+        document.getElementById('screenPending').classList.remove('hidden');
+        startCloudApprovalListener(found.id);
+        showCustomAlert("Your account is still pending administrator approval. Please wait until the admin approves your request.", "Pending Review");
+        return;
+      }
+
+      activePhoneForPending = null;
+      localStorage.removeItem('pine_pending_user_id');
+      currentUser = found;
+      if(!currentUser.nfts) currentUser.nfts = [];
+      if(!currentUser.loans) currentUser.loans = [];
+      if(!currentUser.virtualTrades) currentUser.virtualTrades = [];
+      if(!currentUser.forexPositions) currentUser.forexPositions = [];
+      if(!currentUser.forexHistory) currentUser.forexHistory = [];
+      localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+      renderDashboard();
+      attachUserRealtimeListener();
     }
 
     function renderDashboard() {
