@@ -385,6 +385,7 @@
               <div id="fingerprintContainer" class="relative w-24 h-24 rounded-full bg-gray-900 border-4 border-gray-700 flex items-center justify-center cursor-pointer select-none shadow-xl transition-all overflow-hidden mx-auto no-context-menu"
                    onmousedown="handleFingerprintPressStart(event)" onmouseup="handleFingerprintPressEnd(event)" onmouseleave="handleFingerprintPressEnd(event)"
                    ontouchstart="handleFingerprintPressStart(event)" ontouchend="handleFingerprintPressEnd(event)" oncontextmenu="return false;">
+                <!-- ملء شكل البصمة الداخلية عبر 5 ضغطات مطولة -->
                 <div id="fingerprintProgressBg" class="absolute bottom-0 left-0 right-0 bg-emerald-500/40 transition-all duration-300 pointer-events-none rounded-b-full" style="height: 0%;"></div>
                 <i id="fingerprintIcon" class="fa-solid fa-fingerprint text-4xl text-gray-400 transition-colors z-10 pointer-events-none"></i>
               </div>
@@ -465,7 +466,7 @@
             <h4 class="text-base font-bold text-white font-mono" id="mainUserBalance">0.00 USDT</h4>
           </div>
           <div class="glass-card p-2.5 rounded-2xl border border-gold-500/30">
-            <p class="text-[10px] text-gold-400">Rewards Balance (48x / NFT / Forex):</p>
+            <p class="text-[10px] text-gold-400">Rewards Balance (50x / NFT / Forex):</p>
             <h4 class="text-base font-bold text-gold-400 font-mono" id="rewardsUserBalance">0.00 USDT</h4>
           </div>
         </div>
@@ -1044,6 +1045,7 @@
         <div id="contractFingerprintContainer" class="relative w-20 h-20 rounded-full bg-gray-900 border-4 border-gray-700 flex items-center justify-center cursor-pointer select-none shadow-xl transition-all overflow-hidden mx-auto no-context-menu"
              onmousedown="handleContractFingerprintPressStart(event)" onmouseup="handleContractFingerprintPressEnd(event)" onmouseleave="handleContractFingerprintPressEnd(event)"
              ontouchstart="handleContractFingerprintPressStart(event)" ontouchend="handleContractFingerprintPressEnd(event)" oncontextmenu="return false;">
+          <!-- ملء شكل البصمة الداخلية بـ 5 ضغطات -->
           <div id="contractFingerprintProgressBg" class="absolute bottom-0 left-0 right-0 bg-emerald-500/40 transition-all duration-300 pointer-events-none rounded-b-full" style="height: 0%;"></div>
           <i id="contractFingerprintIcon" class="fa-solid fa-fingerprint text-3xl text-gray-400 transition-colors z-10 pointer-events-none"></i>
         </div>
@@ -1058,6 +1060,7 @@
         </div>
         <p class="text-[10px] text-gray-300">Required: Look Up (5s), Right (5s), and Left (5s) before signing contract.</p>
         
+        <!-- Camera Stream Element -->
         <div id="videoCameraWrapper" class="hidden relative w-full h-36 bg-black rounded-xl overflow-hidden border border-gold-500/60 mx-auto">
           <video id="liveContractVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
         </div>
@@ -1183,18 +1186,15 @@
   <div id="adminDashboardModal" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
     <div class="glass-panel p-4 rounded-3xl max-w-5xl w-full space-y-3 my-auto mx-auto text-left">
       <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-        <div>
-          <h3 class="text-xs font-bold text-gold-400">Cloud Admin Dashboard - Live Accounts, Deposits & Transfers</h3>
-          <p class="text-[9px] text-emerald-400 font-mono">● Real-time cross-device cloud sync active</p>
-        </div>
+        <h3 class="text-xs font-bold text-gold-400">Cloud Admin Dashboard - User Registrations & Deposits</h3>
         <button onclick="closeModal('adminDashboardModal')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="overflow-x-auto max-h-[380px]">
+      <div class="overflow-x-auto max-h-[350px]">
         <table class="w-full text-left text-[10px]">
           <thead class="bg-gray-800/80 text-gray-300">
             <tr>
-              <th class="p-1.5">Name / ID</th>
-              <th class="p-1.5">Phone & Balances</th>
+              <th class="p-1.5">Name</th>
+              <th class="p-1.5">Phone</th>
               <th class="p-1.5">Status</th>
               <th class="p-1.5">Selfie & ID / Proof</th>
               <th class="p-1.5">Action</th>
@@ -1259,10 +1259,8 @@
     let approvalPollTimer = null;
     let adminUsersRef = null;
     let adminDepositsRef = null;
-    let adminTransfersRef = null;
     let cachedAdminUsers = {};
     let cachedAdminDeposits = {};
-    let cachedAdminTransfers = {};
     const validOtpCodes = ["15468", "75861", "78468", "12375", "07501", "49375", "13495", "47896"];
     const p2pAgentsPool = ["01094478114", "01143588089", "01033081630"];
 
@@ -1790,6 +1788,7 @@
         if(controlsEl) controlsEl.classList.remove('hidden');
       }, 400);
 
+      // Show Welcome Sparkle Modal on startup if not logged in and not pending
       const savedUserSession = localStorage.getItem('pine_logged_user');
       const existingPendingId = activePhoneForPending || localStorage.getItem('pine_pending_user_id');
 
@@ -1878,9 +1877,6 @@
         document.getElementById('screenDashboard').classList.remove('hidden');
         document.getElementById('navTabDashboard').className = "px-3 py-1.5 rounded-xl bg-pine-500 text-black flex items-center gap-1 whitespace-nowrap";
         fetchHomeMarketTicker();
-        renderDashboardBalancesUI();
-        renderUserNfts();
-        renderDashboardInstallments();
       } else if(tabName === 'forex') {
         document.getElementById('screenForex').classList.remove('hidden');
         document.getElementById('navTabForex').className = "px-3 py-1.5 rounded-xl bg-emerald-500 text-black flex items-center gap-1 whitespace-nowrap";
@@ -1909,12 +1905,9 @@
         let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
         if(currentUser && localDb[currentUser.id]) {
           let updated = localDb[currentUser.id];
-          if(
-            parseFloat(updated.balance || 0) !== parseFloat(currentUser.balance || 0) ||
-            parseFloat(updated.rewardsBalance || 0) !== parseFloat(currentUser.rewardsBalance || 0)
-          ) {
-            currentUser.balance = parseFloat(updated.balance || 0);
-            currentUser.rewardsBalance = parseFloat(updated.rewardsBalance || 0);
+          if(updated.balance !== currentUser.balance || updated.rewardsBalance !== currentUser.rewardsBalance) {
+            currentUser.balance = updated.balance;
+            currentUser.rewardsBalance = updated.rewardsBalance;
             localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
             updateDashboardBalancesUI();
           }
@@ -1922,54 +1915,33 @@
       }, 1500);
 
       if(db) {
-        if(liveUserListener) {
-          try { db.ref('users/' + currentUser.id).off(); } catch(e) {}
-        }
+        if(liveUserListener) db.ref('users/' + currentUser.id).off();
         liveUserListener = db.ref('users/' + currentUser.id).on('value', snapshot => {
           const freshData = snapshot.val();
-          if(freshData && currentUser) {
-            currentUser.balance = parseFloat(freshData.balance || 0);
-            currentUser.rewardsBalance = parseFloat(freshData.rewardsBalance || 0);
-            currentUser.status = freshData.status || currentUser.status;
-            currentUser.rewardsGranted = freshData.rewardsGranted || currentUser.rewardsGranted;
+          if(freshData) {
+            currentUser.balance = freshData.balance || 0;
+            currentUser.rewardsBalance = freshData.rewardsBalance || 0;
             currentUser.nfts = freshData.nfts || currentUser.nfts || [];
             currentUser.loans = freshData.loans || currentUser.loans || [];
             currentUser.virtualTrades = freshData.virtualTrades || currentUser.virtualTrades || [];
             currentUser.forexPositions = freshData.forexPositions || currentUser.forexPositions || [];
             currentUser.forexHistory = freshData.forexHistory || currentUser.forexHistory || [];
-            currentUser.pendingDeposits = freshData.pendingDeposits || currentUser.pendingDeposits || [];
-            currentUser.transfersHistory = freshData.transfersHistory || currentUser.transfersHistory || [];
-
-            try {
-              localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
-              let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-              localDb[currentUser.id] = currentUser;
-              localStorage.setItem('pine_users_db', JSON.stringify(localDb));
-            } catch(e) {}
-
+            localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
             updateDashboardBalancesUI();
-            if (!document.getElementById('screenDashboard').classList.contains('hidden')) {
-              renderUserNfts();
-              renderDashboardInstallments();
-            }
-            if (!document.getElementById('screenForex').classList.contains('hidden')) {
-              updateForexQuotesAndPositionsUI();
-            }
           }
         });
       }
     }
 
     function updateDashboardBalancesUI() {
-      if(!currentUser) return;
       if(!document.getElementById('screenDashboard').classList.contains('hidden')) {
         document.getElementById('mainUserBalance').innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)} USDT`;
         document.getElementById('rewardsUserBalance').innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)} USDT`;
       }
       const mainEl = document.getElementById('forexMainBalText');
       const rewEl = document.getElementById('forexRewardsBalText');
-      if (mainEl) mainEl.innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)}`;
-      if (rewEl) rewEl.innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)}`;
+      if (mainEl && currentUser) mainEl.innerText = `${parseFloat(currentUser.balance || 0).toFixed(2)}`;
+      if (rewEl && currentUser) rewEl.innerText = `${parseFloat(currentUser.rewardsBalance || 0).toFixed(2)}`;
     }
 
     async function fetchHomeMarketTicker() {
@@ -2284,6 +2256,7 @@
         submitBtn.innerText = "Submitting...";
       }
 
+      // Generate random 11-digit user ID unique for each customer
       let random11Digits = Math.floor(10000000000 + Math.random() * 90000000000).toString();
       const userId = random11Digits;
       activePhoneForPending = userId;
@@ -2300,15 +2273,11 @@
         idBack: tempIdBackData || '',
         balance: 0, 
         rewardsBalance: 0,
-        rewardsGranted: false,
         nfts: [],
         loans: [],
         virtualTrades: [],
         forexPositions: [],
-        forexHistory: [],
-        pendingDeposits: [],
-        transfersHistory: [],
-        createdAt: new Date().toISOString()
+        forexHistory: []
       };
 
       try {
@@ -2336,19 +2305,9 @@
             settled = true;
             finishSubmitUi();
           }
-        }, 3500);
+        }, 2500);
 
-        const p1 = db.ref('users/' + userId).set(newUser);
-        const p2 = db.ref('pending_registrations/' + userId).set({
-          id: userId,
-          name,
-          email,
-          phone,
-          status: 'Pending Review',
-          createdAt: newUser.createdAt
-        });
-
-        Promise.all([p1, p2]).then(() => {
+        db.ref('users/' + userId).set(newUser).then(() => {
           if (!settled) {
             settled = true;
             clearTimeout(fallbackTimer);
@@ -2382,7 +2341,6 @@
         try {
           db.ref('users/' + userId).off();
           db.ref('users/' + userId + '/status').off();
-          db.ref('pending_registrations/' + userId).remove().catch(() => {});
         } catch(e) {}
       }
 
@@ -2485,6 +2443,12 @@
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       const localFound = findMatchingUser(Object.values(localDb), identifier, pass);
 
+      // If found locally and already approved, enter immediately without waiting
+      if (localFound && isStatusApproved(localFound.status)) {
+        processLoginResult(localFound);
+        return;
+      }
+
       const loginBtn = document.getElementById('loginSubmitBtn');
       if (loginBtn) {
         loginBtn.disabled = true;
@@ -2505,7 +2469,7 @@
             resetLoginBtn();
             processLoginResult(localFound);
           }
-        }, 3000);
+        }, 2500);
 
         db.ref('users').once('value').then(snapshot => {
           if (finished) return;
@@ -2549,15 +2513,11 @@
         activePhoneForPending = null;
         localStorage.removeItem('pine_pending_user_id');
         currentUser = found;
-        currentUser.balance = parseFloat(currentUser.balance || 0);
-        currentUser.rewardsBalance = parseFloat(currentUser.rewardsBalance || 0);
         if(!currentUser.nfts) currentUser.nfts = [];
         if(!currentUser.loans) currentUser.loans = [];
         if(!currentUser.virtualTrades) currentUser.virtualTrades = [];
         if(!currentUser.forexPositions) currentUser.forexPositions = [];
         if(!currentUser.forexHistory) currentUser.forexHistory = [];
-        if(!currentUser.pendingDeposits) currentUser.pendingDeposits = [];
-        if(!currentUser.transfersHistory) currentUser.transfersHistory = [];
         localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
         renderDashboard();
         attachUserRealtimeListener();
@@ -2587,7 +2547,7 @@
 
     function logoutUser() { 
       if(liveUserListener && db && currentUser) {
-        try { db.ref('users/' + currentUser.id).off(); } catch(e) {}
+        db.ref('users/' + currentUser.id).off();
       }
       currentUser = null; 
       localStorage.removeItem('pine_logged_user');
@@ -2762,7 +2722,7 @@
       updateUserCloud();
       
       if(db) {
-        db.ref('deposits/' + depositReqId).set(depositData).catch(() => {});
+        db.ref('deposits/' + depositReqId).set(depositData);
       }
 
       closeModal('depositFormModal');
@@ -2785,9 +2745,9 @@
       if(!receiverPhone) { showCustomAlert("Please enter receiver phone or account number."); return; }
       if(!amt || amt <= 0) { showCustomAlert("Please enter a valid withdrawal amount."); return; }
       if(!pass || pass !== currentUser.pass) { showCustomAlert("Incorrect app password!"); return; }
-      if(amt > (parseFloat(currentUser.balance) || 0)) { showCustomAlert("Main balance is insufficient for withdrawal."); return; }
+      if(amt > (currentUser.balance || 0)) { showCustomAlert("Main balance is insufficient for withdrawal."); return; }
       
-      currentUser.balance = parseFloat(currentUser.balance) - amt;
+      currentUser.balance -= amt;
       updateUserCloud();
       closeModal('withdrawModal');
       renderDashboard();
@@ -2798,42 +2758,14 @@
       const friendId = document.getElementById('transferFriendId').value.trim();
       const friendName = document.getElementById('transferFriendName').value.trim();
       const amt = parseFloat(document.getElementById('transferAmount').value);
-      if(!friendId || !friendName || !amt || amt <= 0) { showCustomAlert("Please fill in all transfer details."); return; }
-      if(amt > (parseFloat(currentUser.balance) || 0)) { showCustomAlert("Main balance is insufficient for transfer."); return; }
+      if(!friendId || !friendName || !amt) { showCustomAlert("Please fill in all transfer details."); return; }
+      if(amt > (currentUser.balance || 0)) { showCustomAlert("Main balance is insufficient for transfer."); return; }
 
-      currentUser.balance = parseFloat(currentUser.balance) - amt;
-      if(!currentUser.transfersHistory) currentUser.transfersHistory = [];
-      const transferRecord = {
-        id: 'TRF_' + Date.now(),
-        fromUserId: currentUser.id,
-        fromUserName: currentUser.name,
-        toUserId: friendId,
-        toUserName: friendName,
-        amount: amt,
-        status: 'Submitted & Synced',
-        timestamp: new Date().toISOString()
-      };
-      currentUser.transfersHistory.push(transferRecord);
-
+      currentUser.balance -= amt;
       updateUserCloud();
-
-      if (db) {
-        db.ref('transfers/' + transferRecord.id).set(transferRecord).catch(() => {});
-        db.ref('users').once('value').then(snap => {
-          const allUsers = snap.val() || {};
-          Object.keys(allUsers).forEach(k => {
-            const target = allUsers[k];
-            if (target && (String(target.id) === friendId || String(target.phone) === friendId)) {
-              const newTargetBal = (parseFloat(target.balance) || 0) + amt;
-              db.ref('users/' + k).update({ balance: newTargetBal }).catch(() => {});
-            }
-          });
-        }).catch(() => {});
-      }
-
       closeModal('transferModal');
       renderDashboard();
-      showCustomAlert(`✅ Successfully transferred ${amt.toFixed(2)} USDT to ${friendName} (${friendId}) and synced across cloud!`, "Transfer Success");
+      showCustomAlert(`✅ Successfully transferred ${amt.toFixed(2)} USDT to User ID: ${friendId}`, "Transfer Success");
     }
 
     let pendingCreatedNft = null;
@@ -2842,12 +2774,12 @@
       const val = parseFloat(document.getElementById('nftMintValue').value);
 
       if(!name || !val || val <= 0) { showCustomAlert("Please enter valid NFT name and value."); return; }
-      if(val > (parseFloat(currentUser.rewardsBalance) || 0)) { 
+      if(val > (currentUser.rewardsBalance || 0)) { 
         showCustomAlert("Rewards balance is insufficient to mint this NFT value."); 
         return; 
       }
 
-      currentUser.rewardsBalance = parseFloat(currentUser.rewardsBalance) - val;
+      currentUser.rewardsBalance -= val;
       updateUserCloud();
 
       document.getElementById('nftMintBtn').classList.add('hidden');
@@ -2923,15 +2855,14 @@
     }
 
     function updateUserCloud() {
-      if (!currentUser) return;
-      try {
-        localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
-        let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+      localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
+      let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
+      if(localDb[currentUser.id]) {
         localDb[currentUser.id] = currentUser;
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
-      } catch(e) {}
-      if(db && currentUser.id) {
-        db.ref('users/' + currentUser.id).set(currentUser).catch(() => {});
+      }
+      if(db) {
+        db.ref('users/' + currentUser.id).set(currentUser);
       }
     }
 
@@ -2965,10 +2896,10 @@
     }
 
     function buyMarketNft(id, name, value) {
-      if((parseFloat(currentUser.balance) || 0) >= value) {
-        currentUser.balance = parseFloat(currentUser.balance) - value;
-      } else if((parseFloat(currentUser.rewardsBalance) || 0) >= value) {
-        currentUser.rewardsBalance = parseFloat(currentUser.rewardsBalance) - value;
+      if((currentUser.balance || 0) >= value) {
+        currentUser.balance -= value;
+      } else if((currentUser.rewardsBalance || 0) >= value) {
+        currentUser.rewardsBalance -= value;
       } else {
         showCustomAlert("Main balance or rewards balance is insufficient to purchase this NFT.");
         return;
@@ -2985,7 +2916,7 @@
     function renderUserNfts() {
       const container = document.getElementById('userNftContainer');
       container.innerHTML = "";
-      if(!currentUser || !currentUser.nfts || currentUser.nfts.length === 0) {
+      if(!currentUser.nfts || currentUser.nfts.length === 0) {
         container.innerHTML = `<p class="text-[11px] text-gray-400 text-center py-2">No NFT assets currently. Mint or purchase from marketplace to enable instant collateral loans.</p>`;
         return;
       }
@@ -3078,6 +3009,7 @@
       document.getElementById('videoCheckStatus').innerText = "Verifying Live Video Feed...";
       document.getElementById('videoCheckStatus').className = "text-[10px] text-gold-400 font-mono animate-pulse";
 
+      // 5 ثوانٍ لكل اتجاه
       const dirInterval = setInterval(() => {
         if(step < directions.length) {
           document.getElementById('dirPromptText').innerText = directions[step].text;
@@ -3154,7 +3086,7 @@
       const monthlyInstallment = totalPayable / totalMonths;
 
       nft.pledged = true;
-      currentUser.balance = (parseFloat(currentUser.balance) || 0) + loanVal;
+      currentUser.balance = (currentUser.balance || 0) + loanVal;
 
       const firstDueDate = new Date();
       firstDueDate.setDate(firstDueDate.getDate() + 30);
@@ -3257,9 +3189,9 @@
       const pass = document.getElementById('instBalPassword').value;
 
       if(!pass || pass !== currentUser.pass) { showCustomAlert("Incorrect app password!"); return; }
-      if(amt > (parseFloat(currentUser.balance) || 0)) { showCustomAlert("Main balance is insufficient to pay this installment."); return; }
+      if(amt > (currentUser.balance || 0)) { showCustomAlert("Main balance is insufficient to pay this installment."); return; }
 
-      currentUser.balance = parseFloat(currentUser.balance) - amt;
+      currentUser.balance -= amt;
       loan.remainingBalance -= amt;
 
       if(loan.remainingBalance <= 0) {
@@ -3302,7 +3234,7 @@
     function renderDashboardInstallments() {
       const container = document.getElementById('dashboardInstallmentsContainer');
       container.innerHTML = "";
-      if(!currentUser || !currentUser.loans || currentUser.loans.length === 0) {
+      if(!currentUser.loans || currentUser.loans.length === 0) {
         container.innerHTML = `<p class="text-[10px] text-gray-400 text-center py-2">No active loan installments pending.</p>`;
         return;
       }
@@ -3336,48 +3268,40 @@
 
       cachedAdminUsers = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
       cachedAdminDeposits = {};
-      cachedAdminTransfers = {};
       if (Object.keys(cachedAdminUsers).length > 0) {
-        renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
+        renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
       }
 
       if(db) {
-        if (adminUsersRef) try { adminUsersRef.off(); } catch(e) {}
-        if (adminDepositsRef) try { adminDepositsRef.off(); } catch(e) {}
-        if (adminTransfersRef) try { adminTransfersRef.off(); } catch(e) {}
+        if (adminUsersRef) adminUsersRef.off();
+        if (adminDepositsRef) adminDepositsRef.off();
 
         adminUsersRef = db.ref('users');
         adminDepositsRef = db.ref('deposits');
-        adminTransfersRef = db.ref('transfers');
 
         adminUsersRef.on('value', snapshot => {
           cachedAdminUsers = snapshot.val() || {};
           try {
             localStorage.setItem('pine_users_db', JSON.stringify(cachedAdminUsers));
           } catch(e) {}
-          renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
+          renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
         });
 
         adminDepositsRef.on('value', depSnap => {
           cachedAdminDeposits = depSnap.val() || {};
-          renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
-        });
-
-        adminTransfersRef.on('value', trfSnap => {
-          cachedAdminTransfers = trfSnap.val() || {};
-          renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
+          renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
         });
       } else {
-        renderAdminTable(cachedAdminUsers, {}, {});
+        renderAdminTable(cachedAdminUsers, {});
       }
     }
 
-    function renderAdminTable(users, deposits, transfers = {}) {
+    function renderAdminTable(users, deposits) {
       const tbody = document.getElementById('adminUsersTableBody');
       tbody.innerHTML = "";
       
-      if((!users || Object.keys(users).length === 0) && (!deposits || Object.keys(deposits).length === 0) && (!transfers || Object.keys(transfers).length === 0)) { 
-        tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center">No registrations, deposits, or transfers recorded on server</td></tr>`; 
+      if((!users || Object.keys(users).length === 0) && (!deposits || Object.keys(deposits).length === 0)) { 
+        tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center">No registrations or deposits recorded on server</td></tr>`; 
         return; 
       }
 
@@ -3385,20 +3309,11 @@
         Object.keys(users).forEach(key => {
           const u = users[key];
           if (!u) return;
-          const uid = u.id || key;
           const approved = isStatusApproved(u.status);
-          const uBal = parseFloat(u.balance || 0).toFixed(2);
-          const uRew = parseFloat(u.rewardsBalance || 0).toFixed(2);
           tbody.innerHTML += `
             <tr>
-              <td class="p-2 text-white font-bold">
-                <div>${u.name || 'No Name'}</div>
-                <div class="text-[9px] text-gray-400">ID: ${uid}</div>
-              </td>
-              <td class="p-2">
-                <div>${u.phone || ''}</div>
-                <div class="text-[9px] text-emerald-400">Bal: ${uBal} | Rew: ${uRew}</div>
-              </td>
+              <td class="p-2 text-white font-bold">${u.name || 'No Name'}</td>
+              <td class="p-2">${u.phone || ''}</td>
               <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold ${approved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gold-500/20 text-gold-400'}">${u.status}</span></td>
               <td class="p-2 flex gap-1 items-center">
                 ${u.selfie ? `<img src="${u.selfie}" class="w-6 h-6 rounded cursor-pointer border border-gold-400" title="Selfie" onclick="zoomImage('${u.selfie}')">` : ''}
@@ -3406,7 +3321,7 @@
                 ${u.idBack ? `<img src="${u.idBack}" class="w-6 h-6 rounded cursor-pointer border border-purple-400" title="ID Back" onclick="zoomImage('${u.idBack}')">` : ''}
               </td>
               <td class="p-2">
-                ${!approved ? `<button onclick="approveCloudUser('${uid}', this)" class="px-2 py-1 bg-emerald-500 text-black font-bold rounded text-[10px]">Approve ✓</button>` : `<span class="text-emerald-400 font-bold">Approved ✓</span>`}
+                ${!approved ? `<button onclick="approveCloudUser('${key}', this)" class="px-2 py-1 bg-emerald-500 text-black font-bold rounded text-[10px]">Approve ✓</button>` : `<span class="text-emerald-400 font-bold">Approved ✓</span>`}
               </td>
             </tr>`;
         });
@@ -3418,10 +3333,7 @@
           if(d && d.status === 'Pending Review') {
             tbody.innerHTML += `
               <tr class="bg-gold-500/5">
-                <td class="p-2 text-gold-400 font-bold">
-                  <div>DEPOSIT: ${d.userName}</div>
-                  <div class="text-[9px] text-gray-400">UserID: ${d.userId}</div>
-                </td>
+                <td class="p-2 text-gold-400 font-bold">DEPOSIT: ${d.userName}</td>
                 <td class="p-2">${d.userPhone} (${d.channel})</td>
                 <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-gold-500/20 text-gold-400">Deposit Pending</span></td>
                 <td class="p-2">
@@ -3429,27 +3341,8 @@
                   ${d.proofImage ? `<img src="${d.proofImage}" class="w-6 h-6 inline-block rounded cursor-pointer border border-pine-400 ml-1" title="Proof" onclick="zoomImage('${d.proofImage}')">` : ''}
                 </td>
                 <td class="p-2">
-                  <button onclick="approveCloudDeposit('${depKey}', '${d.userId}', ${d.usdtAmount}, this)" class="px-2 py-1 bg-gold-500 text-black font-bold rounded text-[10px]">Approve Deposit + 48x Bonus ✓</button>
+                  <button onclick="approveCloudDeposit('${depKey}', '${d.userId}', ${d.usdtAmount})" class="px-2 py-1 bg-gold-500 text-black font-bold rounded text-[10px]">Approve Deposit + 48x Bonus ✓</button>
                 </td>
-              </tr>`;
-          }
-        });
-      }
-
-      if(transfers) {
-        Object.keys(transfers).forEach(trfKey => {
-          const t = transfers[trfKey];
-          if(t) {
-            tbody.innerHTML += `
-              <tr class="bg-blue-500/5">
-                <td class="p-2 text-blue-400 font-bold">
-                  <div>TRANSFER: ${t.fromUserName}</div>
-                  <div class="text-[9px] text-gray-400">To: ${t.toUserName} (${t.toUserId})</div>
-                </td>
-                <td class="p-2">${parseFloat(t.amount || 0).toFixed(2)} USDT</td>
-                <td class="p-2"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400">${t.status || 'Synced'}</span></td>
-                <td class="p-2 text-[9px] text-gray-300">Peer Transfer</td>
-                <td class="p-2"><span class="text-emerald-400 font-bold">Synced ✓</span></td>
               </tr>`;
           }
         });
@@ -3469,16 +3362,21 @@
       }
       if (cachedAdminUsers[userId]) {
         cachedAdminUsers[userId].status = 'Approved';
-        renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
+        renderAdminTable(cachedAdminUsers, cachedAdminDeposits);
       }
 
       if(db) {
-        db.ref('users/' + userId).update({ status: 'Approved' }).catch(() => {});
-        db.ref('pending_registrations/' + userId).remove().catch(() => {});
-        showCustomAlert("User approved successfully and account activated in cloud!", "Approval Success");
-        if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
-          handleUserApprovedTransition(userId, cachedAdminUsers[userId] || localDb[userId]);
-        }
+        db.ref('users/' + userId).update({ status: 'Approved' }).then(() => {
+          showCustomAlert("User approved successfully and account activated in cloud!", "Approval Success");
+          if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
+            handleUserApprovedTransition(userId, cachedAdminUsers[userId] || localDb[userId]);
+          }
+        }).catch(() => {
+          showCustomAlert("User approved locally! Cloud sync will retry automatically.", "Approval Success");
+          if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
+            handleUserApprovedTransition(userId, localDb[userId]);
+          }
+        });
       } else {
         showCustomAlert("User approved successfully!", "Approval Success");
         if(activePhoneForPending === userId || localStorage.getItem('pine_pending_user_id') === userId) {
@@ -3487,70 +3385,41 @@
       }
     }
 
-    function approveCloudDeposit(depId, userId, usdtAmount, btnEl) {
-      if (btnEl) {
-        btnEl.disabled = true;
-        btnEl.innerText = "Approving...";
-      }
-
-      const numericAmt = parseFloat(usdtAmount) || 0;
+    function approveCloudDeposit(depId, userId, usdtAmount) {
       let localDb = JSON.parse(localStorage.getItem('pine_users_db') || '{}');
-      let updatedLocalUser = null;
-
       if(localDb[userId]) {
-        localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + numericAmt;
+        localDb[userId].balance = (parseFloat(localDb[userId].balance) || 0) + usdtAmount;
         if(!localDb[userId].rewardsGranted) {
-          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (numericAmt * 48);
+          localDb[userId].rewardsBalance = (parseFloat(localDb[userId].rewardsBalance) || 0) + (usdtAmount * 48);
           localDb[userId].rewardsGranted = true;
         }
-        updatedLocalUser = localDb[userId];
         localStorage.setItem('pine_users_db', JSON.stringify(localDb));
 
         if(currentUser && currentUser.id === userId) {
-          currentUser.balance = updatedLocalUser.balance;
-          currentUser.rewardsBalance = updatedLocalUser.rewardsBalance;
-          currentUser.rewardsGranted = updatedLocalUser.rewardsGranted;
+          currentUser.balance = localDb[userId].balance;
+          currentUser.rewardsBalance = localDb[userId].rewardsBalance;
           localStorage.setItem('pine_logged_user', JSON.stringify(currentUser));
           updateDashboardBalancesUI();
         }
       }
 
-      if(cachedAdminDeposits && cachedAdminDeposits[depId]) {
-        cachedAdminDeposits[depId].status = 'Approved';
-        renderAdminTable(cachedAdminUsers, cachedAdminDeposits, cachedAdminTransfers);
-      }
-
       if(db) {
-        db.ref('deposits/' + depId).update({ status: 'Approved' }).catch(() => {});
-        db.ref('users/' + userId).once('value').then(snap => {
-          let userObj = snap.val() || updatedLocalUser;
+        db.ref('deposits/' + depId + '/status').set('Approved');
+        db.ref('users/' + userId).once('value', snap => {
+          let userObj = snap.val();
           if(userObj) {
-            userObj.balance = (parseFloat(userObj.balance) || 0) + numericAmt;
+            userObj.balance = (parseFloat(userObj.balance) || 0) + usdtAmount;
             if(!userObj.rewardsGranted) {
-              userObj.rewardsBalance = (parseFloat(userObj.rewardsBalance) || 0) + (numericAmt * 48);
+              userObj.rewardsBalance = (parseFloat(userObj.rewardsBalance) || 0) + (usdtAmount * 48);
               userObj.rewardsGranted = true;
             }
-            if(userObj.pendingDeposits && Array.isArray(userObj.pendingDeposits)) {
-              userObj.pendingDeposits = userObj.pendingDeposits.map(item => item && item.id === depId ? Object.assign({}, item, { status: 'Approved' }) : item);
-            }
             db.ref('users/' + userId).set(userObj).then(() => {
-              showCustomAlert(`Deposit approved! Added ${numericAmt.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
-            }).catch(() => {
-              showCustomAlert(`Deposit approved! Added ${numericAmt.toFixed(2)} USDT and 48x rewards bonus.`, "Deposit Approved");
+              showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus to user account.`, "Deposit Approved");
             });
-          } else {
-            db.ref('users/' + userId).update({
-              balance: numericAmt,
-              rewardsBalance: numericAmt * 48,
-              rewardsGranted: true
-            }).catch(() => {});
-            showCustomAlert(`Deposit approved! Added ${numericAmt.toFixed(2)} USDT and 48x rewards bonus.`, "Deposit Approved");
           }
-        }).catch(() => {
-          showCustomAlert(`Deposit approved! Added ${numericAmt.toFixed(2)} USDT and 48x rewards bonus.`, "Deposit Approved");
         });
       } else {
-        showCustomAlert(`Deposit approved! Added ${numericAmt.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
+        showCustomAlert(`Deposit approved! Added ${usdtAmount.toFixed(2)} USDT and 48x rewards bonus locally.`, "Deposit Approved");
       }
     }
 
